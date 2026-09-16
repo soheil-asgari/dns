@@ -11,8 +11,7 @@ import (
 	_ "github.com/coredns/coredns/plugin/forward"
 	_ "github.com/coredns/coredns/plugin/health"
 	_ "github.com/coredns/coredns/plugin/log"
-	_ "github.com/coredns/coredns/plugin/prometheus"
-	_ "github.com/coredns/coredns/plugin/ratelimit"
+	_ "github.com/coredns/coredns/plugin/metrics"
 	_ "github.com/coredns/coredns/plugin/whoami"
 
 	// Custom plugins — init() in setup.go calls plugin.Register("gaming_filter", setup)

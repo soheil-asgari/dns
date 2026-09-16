@@ -66,7 +66,7 @@ func (gf *GamingFilter) modifyResponse(ctx context.Context, w dns.ResponseWriter
 
 	proxyIP := net.ParseIP(gf.proxyIP)
 	if proxyIP == nil {
-		return dns.RcodeServerFailure, plugin.ErrQueryNotAnswered
+		return dns.RcodeServerFailure, nil
 	}
 
 	header := dns.RR_Header{
