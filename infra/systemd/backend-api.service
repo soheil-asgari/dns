@@ -1,0 +1,26 @@
+[Unit]
+Description=Backend API - ASP.NET Core Web API
+Documentation=https://dotnet.microsoft.com
+After=network.target sqlserver.service redis.service
+Wants=sqlserver.service redis.service
+
+[Service]
+Type=simple
+User=dotnet
+Group=dotnet
+WorkingDirectory=/opt/backend-api
+ExecStart=/usr/bin/dotnet WebApi.dll
+Restart=on-failure
+RestartSec=10
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=ASPNETCORE_URLS=http://0.0.0.0:8080
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/log/backend-api
+
+[Install]
+WantedBy=multi-user.target

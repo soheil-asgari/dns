@@ -1,0 +1,74 @@
+#!/usr/sbin/nft -f
+
+# Gaming DNS infrastructure nftables rules
+table inet filter {
+    chain input {
+        type filter hook input priority 0; policy drop;
+        
+        # Allow established connections
+        ct state established,related accept
+        
+        # Allow loopback
+        iif lo accept
+        
+        # Allow SSH (port 22)
+        tcp dport 22 accept
+        
+        # Allow DNS (TCP/UDP 53)
+        tcp dport 53 accept
+        udp dport 53 accept
+        
+        # Allow DNS over HTTPS (8053)
+        tcp dport 8053 accept
+        
+        # Allow HTTP/HTTPS
+        tcp dport {80, 443} accept
+        
+        # Allow HAProxy stats
+        tcp dport 8404 accept
+        
+        # Allow Prometheus metrics
+        tcp dport 9153 accept
+        
+        # Allow ICMP (ping)
+        icmp type echo-request accept
+        
+        # Log dropped packets
+        log prefix "NFT_INPUT_DROP: " limit rate 10/minute
+    }
+    
+    chain forward {
+        type filter hook forward priority 0; policy drop;
+        
+        # Allow forwarding for Docker/bridge networks
+        iif docker0 oif eth0 accept
+        iif eth0 oif docker0 ct state established,related accept
+        
+        log prefix "NFT_FWD_DROP: " limit rate 10/minute
+    }
+    
+    chain output {
+        type filter hook output priority 0; policy accept
+    }
+}
+
+# Gaming traffic optimization table
+table inet gaming {
+    chain priority {
+        type filter hook output priority -200; policy accept
+        
+        # Prioritize gaming domain traffic
+        tcp dport {443, 80} meta mark set 0x2
+        
+        # DNS queries high priority
+        udp dport 53 meta mark set 0x1
+        tcp dport 53 meta mark set 0x1
+    }
+    
+    chain dscp {
+        type filter hook output priority -150; policy accept
+        
+        # Mark gaming traffic with DSCP CS4 (for QoS)
+        tcp dport {443, 80} ip dscp set 0x20
+    }
+}

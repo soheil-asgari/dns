@@ -1,0 +1,49 @@
+version: '3.8'
+
+name: dns-infra-prod
+
+services:
+  coredns:
+    image: coredns/coredns:latest
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+    volumes:
+      - ./dns-server/Corefile:/etc/coredns/Corefile:ro
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+    configs:
+      - source: corefile
+        target: /etc/coredns/Corefile
+
+  haproxy:
+    image: haproxy:2.8-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./proxy-server/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - /etc/ssl/certs:/etc/ssl/certs:ro
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis-data:/data
+    deploy:
+      resources:
+        limits:
+          cpus: '0.3'
+          memory: 128M
+
+volumes:
+  redis-data:

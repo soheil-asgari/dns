@@ -1,0 +1,37 @@
+.:53 {
+    bind 0.0.0.0
+    health
+    prometheus :9153
+    
+    # Log all queries
+    log
+    errors
+    
+    # Forward to upstream DNS (Google) for non-gaming domains
+    forward . 8.8.8.8 8.8.4.4 {
+        max_concurrent 1000
+    }
+    
+    # Cache responses
+    cache {
+        success 512 30 60
+        denial 128 5 30
+    }
+    
+    # Gaming-specific plugin (custom)
+    gaming_filter {
+        redis_addr redis:6379
+        refresh_interval 60s
+    }
+    
+    # Rate limiting
+    ratelimit 1000 {
+        whitelist 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
+    }
+}
+
+# Health check endpoint
+.:8053 {
+    bind 0.0.0.0
+    whoami
+}

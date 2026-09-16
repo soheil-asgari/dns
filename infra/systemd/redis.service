@@ -1,0 +1,24 @@
+[Unit]
+Description=Redis In-Memory Data Store
+Documentation=https://redis.io
+After=network.target
+
+[Service]
+Type=simple
+User=redis
+Group=redis
+ExecStart=/usr/bin/redis-server /etc/redis/redis.conf
+ExecStop=/usr/bin/redis-cli shutdown
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=65536
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/lib/redis /var/log/redis
+
+[Install]
+WantedBy=multi-user.target

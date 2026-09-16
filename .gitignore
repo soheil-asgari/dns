@@ -1,0 +1,39 @@
+# .NET
+**/bin/
+**/obj/
+*.user
+*.suo
+
+# Node
+node_modules/
+dist/
+.env
+
+# Go
+dns-server/plugin/*/vendor/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+**/.db_data/
+**/data/
+
+# Build
+panel-frontend/dist/
+telegram-bot/dist/
+**/*.exe
+**/*.dll
+**/*.so
+**/*.dylib
+
+# Logs
+*.log
+/logs/

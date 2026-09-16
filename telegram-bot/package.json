@@ -1,0 +1,22 @@
+{
+  "name": "telegram-bot",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "telegraf": "^4.16.0",
+    "telegraf-session-redis": "^6.0.0",
+    "axios": "^1.7.0",
+    "dotenv": "^16.4.0",
+    "pino": "^8.19.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "tsx": "^4.7.0",
+    "@types/node": "^20.11.0"
+  }
+}

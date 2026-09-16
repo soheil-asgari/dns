@@ -1,0 +1,162 @@
+version: '3.8'
+
+name: dns-infra
+
+services:
+  # ============================================
+  # CoreDNS
+  # ============================================
+  coredns:
+    build:
+      context: ./dns-server
+      dockerfile: Dockerfile
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+      - "9153:9153"   # Prometheus metrics
+    volumes:
+      - ./dns-server/Corefile:/etc/coredns/Corefile:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      dns-net:
+        ipv4_address: 172.20.0.10
+
+  # ============================================
+  # HAProxy (optional for local testing)
+  # ============================================
+  haproxy:
+    build:
+      context: ./proxy-server
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8404:8404"   # Stats
+    volumes:
+      - ./proxy-server/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      - backend-api
+      - panel-frontend
+      - telegram-bot
+      - coredns
+    restart: unless-stopped
+    networks:
+      - dns-net
+
+  # ============================================
+  # Backend API (ASP.NET Core)
+  # ============================================
+  backend-api:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://0.0.0.0:8080
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=DnsServiceDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True"
+      ConnectionStrings__Redis: "redis:6379"
+    ports:
+      - "8080:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - dns-net
+
+  # ============================================
+  # Panel Frontend (React + Vite)
+  # ============================================
+  panel-frontend:
+    build:
+      context: ./panel-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend-api
+    restart: unless-stopped
+    networks:
+      - dns-net
+
+  # ============================================
+  # Telegram Bot
+  # ============================================
+  telegram-bot:
+    build:
+      context: ./telegram-bot
+      dockerfile: Dockerfile
+    environment:
+      BOT_TOKEN: ${BOT_TOKEN:-}
+      API_URL: http://backend-api:8080
+      REDIS_URL: redis://redis:6379
+      ADMIN_IDS: ${ADMIN_IDS:-}
+      LOG_LEVEL: debug
+    ports:
+      - "5000:5000"   # Health endpoint
+    depends_on:
+      redis:
+        condition: service_healthy
+      backend-api:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - dns-net
+
+  # ============================================
+  # Redis (Cache + Session Store)
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - dns-net
+
+  # ============================================
+  # SQL Server (Primary Database)
+  # ============================================
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "YourStrong!Passw0rd"
+      MSSQL_PID: Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "YourStrong!Passw0rd" -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - dns-net
+
+networks:
+  dns-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+
+volumes:
+  redis-data:
+  sqlserver-data:
