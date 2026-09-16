@@ -20,9 +20,10 @@
     
     # Gaming-specific plugin (custom)
     gaming_filter {
-        redis_addr redis:6379
-        refresh_interval 60s
-    }
+    redis_addr redis:6379
+    refresh_interval 60s
+    proxy_ip 10.10.0.1
+}
     
     # Rate limiting
     ratelimit 1000 {
