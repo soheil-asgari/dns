@@ -1,7 +1,8 @@
 FROM golang:1.21-alpine AS builder
 WORKDIR /src
-COPY go.mod ./
-RUN go mod download
+COPY go.mod go.sum ./
+# Run tidy to auto-generate or update go.sum entries when empty/missing
+RUN go mod tidy
 COPY . .
 RUN CGO_ENABLED=0 go build -o /coredns ./cmd/coremain/
 

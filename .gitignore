@@ -37,3 +37,6 @@ telegram-bot/dist/
 # Logs
 *.log
 /logs/
+
+# Stray / temp
+-p/
