@@ -1,5 +1,3 @@
-FROM coredns/coredns:latest AS base
-
 FROM golang:1.21-alpine AS builder
 WORKDIR /src
 COPY go.mod go.sum ./

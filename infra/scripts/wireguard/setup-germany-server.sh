@@ -41,13 +41,17 @@ SaveConfig = false
 # ip-forwarding is handled by infra/nftables/dns-filter.nft or sysctl
 PostUp = sysctl -w net.ipv4.ip_forward=1
 PostUp = sysctl -w net.ipv6.conf.all.forwarding=1
-PostUp = nft add rule ip filter FORWARD iifname ${SERVER_INTERFACE} accept
+PostUp = nft add table ip filter 2>/dev/null; nft add chain ip filter FORWARD { type filter hook forward priority 0 \; } 2>/dev/null; nft add rule ip filter FORWARD iifname ${SERVER_INTERFACE} accept
 PostDown = nft delete rule ip filter FORWARD iifname ${SERVER_INTERFACE} accept 2>/dev/null || true
 
 # Iran DNS (WireGuard client)
 [Peer]
 # PublicKey = <paste-iran-client-public-key-here>
 # After first run, copy the Client Public Key printed below into this line.
+# NOTE: AllowedIPs intentionally limited to /32 for split-tunnel operation.
+# Only traffic destined to the Iran client's tunnel IP goes through WireGuard;
+# all other traffic (apt, system updates, etc.) uses the server's local internet.
+# Do NOT change to 0.0.0.0/0 unless you intend a full-VPN topology.
 AllowedIPs = ${CLIENT_ALLOWED_IPS}
 EOF
 
@@ -63,15 +67,14 @@ systemctl start wg-quick@${SERVER_INTERFACE}
 # ===========================================================================
 echo ""
 echo "============================================================"
-echo "  Germany-Exit Server  —  Public Key  (share with Iran)"
+echo "  Germany-Exit Server Setup Complete"
 echo "============================================================"
 echo ""
-echo "  $SERVER_PUB_KEY"
+echo "  Server Public Key:  $SERVER_PUB_KEY"
 echo ""
-echo "============================================================"
-echo "  1. Copy the key above."
-echo "  2. Paste it into your Iran server's wg0.conf [Peer] section."
-echo "  3. Then on Iran run: systemctl restart wg-quick@wg0"
+echo "  Key files:"
+echo "    Private key: ${SERVER_PRIVATE_DIR}/server.key"
+echo "    Public key:  ${SERVER_PRIVATE_DIR}/server.pub"
 echo ""
-echo "  Waiting for Iran peer connection ... (netstat -tulpn | grep 51820)"
+echo "  Config: $SERVER_CONFIG"
 echo "============================================================"

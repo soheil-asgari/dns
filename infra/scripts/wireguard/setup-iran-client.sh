@@ -7,8 +7,9 @@
 set -euo pipefail
 
 # --- Configuration — EDIT THESE BEFORE RUNNING ----------------------------
-SERVER_ENDPOINT="CHANGE_TO_GERMANY_SERVER_IP:51820"
-SERVER_PUBLIC_KEY="CHANGE_TO_GERMANY_SERVER_PUBLIC_KEY"
+# These can be overridden by env vars (e.g. when called from exchange-keys.sh)
+SERVER_ENDPOINT="${SERVER_ENDPOINT:-CHANGE_TO_GERMANY_SERVER_IP:51820}"
+SERVER_PUBLIC_KEY="${SERVER_PUBLIC_KEY:-CHANGE_TO_GERMANY_SERVER_PUBLIC_KEY}"
 # --------------------------------------------------------------------------
 
 PRIVATE_DIR="/etc/wireguard/keys"
@@ -17,7 +18,11 @@ CLIENT_INTERFACE="wg0"
 WG_PORT=51820
 CLIENT_ADDRESS="10.10.0.2/24"
 SERVER_TUNNEL_IP="10.10.0.1"
-ALLOWED_IPS="0.0.0.0/0, ::/0"
+# NOTE: AllowedIPs intentionally limited to /32 for split-tunnel operation.
+# Only traffic destined to the Germany server's tunnel IP goes through WireGuard;
+# all other traffic (apt, system updates, etc.) uses the client's local internet.
+# Do NOT change to 0.0.0.0/0 unless you intend a full-VPN topology.
+ALLOWED_IPS="10.10.0.1/32"
 
 # --- Prerequisites ---------------------------------------------------------
 echo "[*] Installing WireGuard..."
@@ -46,6 +51,7 @@ ListenPort = ${WG_PORT}
 # Route all traffic through Germany (the DNS server decides what to forward)
 # If you only need the tunnel for DNS / gaming, restrict AllowedIPs later.
 PostUp = sysctl -w net.ipv4.ip_forward=1
+PostUp = nft add table ip filter 2>/dev/null; nft add chain ip filter FORWARD { type filter hook forward priority 0 \; } 2>/dev/null; nft add rule ip filter FORWARD iifname ${CLIENT_INTERFACE} accept
 
 [Peer]
 PublicKey = ${SERVER_PUBLIC_KEY}
@@ -66,15 +72,14 @@ systemctl start wg-quick@${CLIENT_INTERFACE}
 # ===========================================================================
 echo ""
 echo "============================================================"
-echo "  Iran-DNS Client  —  Public Key  (share with Germany)"
+echo "  Iran-DNS Client Setup Complete"
 echo "============================================================"
 echo ""
-echo "  $CLIENT_PUB_KEY"
+echo "  Client Public Key:  $CLIENT_PUB_KEY"
 echo ""
-echo "============================================================"
-echo "  1. Copy the key above."
-echo "  2. Paste it into your Germany server's wg0.conf [Peer] section."
-echo "  3. On Germany run: systemctl restart wg-quick@wg0"
+echo "  Key files:"
+echo "    Private key: ${PRIVATE_DIR}/client.key"
+echo "    Public key:  ${PRIVATE_DIR}/client.pub"
 echo ""
-echo "  Then verify the tunnel with: ping ${SERVER_TUNNEL_IP}"
+echo "  Config: $CLIENT_CONFIG"
 echo "============================================================"
