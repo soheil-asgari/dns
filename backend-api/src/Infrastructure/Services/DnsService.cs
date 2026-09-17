@@ -70,4 +70,46 @@ public class DnsService : IDnsService
             AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1)
         });
     }
+
+    public async Task<List<DnsRecord>> GetRecordsAsync()
+    {
+        return await _context.DnsRecords
+            .OrderByDescending(r => r.CreatedAt)
+            .ToListAsync();
+    }
+
+    public async Task<DnsRecord> CreateRecordAsync(DnsRecord record)
+    {
+        record.Id = Guid.NewGuid();
+        record.CreatedAt = DateTime.UtcNow;
+        _context.DnsRecords.Add(record);
+        await _context.SaveChangesAsync();
+        return record;
+    }
+
+    public async Task<DnsRecord?> UpdateRecordAsync(Guid id, DnsRecord record)
+    {
+        var existing = await _context.DnsRecords.FindAsync(id);
+        if (existing == null) return null;
+
+        existing.Domain = record.Domain;
+        existing.RecordType = record.RecordType;
+        existing.Value = record.Value;
+        existing.Ttl = record.Ttl;
+        existing.IsActive = record.IsActive;
+        existing.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+        return existing;
+    }
+
+    public async Task<bool> DeleteRecordAsync(Guid id)
+    {
+        var existing = await _context.DnsRecords.FindAsync(id);
+        if (existing == null) return false;
+
+        _context.DnsRecords.Remove(existing);
+        await _context.SaveChangesAsync();
+        return true;
+    }
 }

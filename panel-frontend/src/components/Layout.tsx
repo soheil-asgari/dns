@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -7,6 +8,8 @@ import {
   BarChart3,
   Settings,
 } from 'lucide-react';
+import { dnsApi } from '../services/api';
+import { useDnsStore } from '../store/dnsStore';
 
 const navItems = [
   { to: '/panel', icon: LayoutDashboard, label: 'Dashboard', end: true },
@@ -17,8 +20,42 @@ const navItems = [
 ];
 
 export default function Layout() {
+  const { isSyncing, setIsSyncing } = useDnsStore();
+  const [syncToast, setSyncToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setSyncToast({ message, type });
+    setTimeout(() => setSyncToast(null), 3000);
+  };
+
+  const handleSync = async () => {
+    setIsSyncing(true);
+    showToast('Syncing DNS records to Redis...', 'success');
+    try {
+      const res = await dnsApi.syncRedis();
+      console.log('Sync response:', res.data);
+      showToast('DNS data synced to Redis successfully', 'success');
+    } catch (err: any) {
+      console.error('Sync failed', err);
+      showToast(err?.response?.data?.message || 'Sync to Redis failed', 'error');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   return (
     <div className="flex h-screen">
+      {/* Toast */}
+      {syncToast && (
+        <div
+          className={`fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg text-white text-sm ${
+            syncToast.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'
+          }`}
+        >
+          {syncToast.message}
+        </div>
+      )}
+
       {/* Sidebar */}
       <aside className="w-64 bg-slate-800 border-r border-slate-700">
         <div className="p-6">
@@ -54,7 +91,9 @@ export default function Layout() {
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Dashboard</h2>
             <div className="flex items-center gap-4">
-              <button className="btn-primary">Sync to Redis</button>
+              <button className="btn-primary" onClick={handleSync} disabled={isSyncing}>
+                {isSyncing ? 'Syncing...' : 'Sync to Redis'}
+              </button>
               <button className="p-2 hover:bg-slate-700 rounded-lg transition-colors">
                 <Settings className="w-5 h-5" />
               </button>

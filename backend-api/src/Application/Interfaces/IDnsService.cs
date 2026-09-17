@@ -1,10 +1,19 @@
+using Domain.Entities;
+
 namespace Application.Interfaces;
 
 public interface IDnsService
 {
+    // Gaming domains
     Task<DnsResolutionResult> ResolveDomainAsync(string domain);
     Task<List<GamingDomainDto>> GetGamingDomainsAsync();
     Task SyncDnsToRedisAsync();
+
+    // DNS Records CRUD
+    Task<List<DnsRecord>> GetRecordsAsync();
+    Task<DnsRecord> CreateRecordAsync(DnsRecord record);
+    Task<DnsRecord?> UpdateRecordAsync(Guid id, DnsRecord record);
+    Task<bool> DeleteRecordAsync(Guid id);
 }
 
 public class DnsResolutionResult

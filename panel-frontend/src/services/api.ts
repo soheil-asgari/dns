@@ -41,6 +41,10 @@ export const dnsApi = {
   resolve: (domain: string) => api.get(`/dns/resolve/${domain}`),
   getGamingDomains: () => api.get<GamingDomain[]>('/dns/gaming-domains'),
   syncRedis: () => api.post('/dns/sync-redis'),
+  getRecords: () => api.get<DnsRecord[]>('/dns/records'),
+  createRecord: (record: Omit<DnsRecord, 'id' | 'createdAt' | 'updatedAt'>) => api.post<DnsRecord>('/dns/records', record),
+  updateRecord: (id: string, record: Partial<DnsRecord>) => api.put<DnsRecord>(`/dns/records/${id}`, record),
+  deleteRecord: (id: string) => api.delete(`/dns/records/${id}`),
 };
 
 export default api;

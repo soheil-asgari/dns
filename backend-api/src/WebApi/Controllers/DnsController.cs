@@ -35,4 +35,34 @@ public class DnsController : ControllerBase
         await _dnsService.SyncDnsToRedisAsync();
         return Ok(new { message = "DNS data synced to Redis" });
     }
+
+    [HttpGet("records")]
+    public async Task<IActionResult> GetRecords()
+    {
+        var records = await _dnsService.GetRecordsAsync();
+        return Ok(records);
+    }
+
+    [HttpPost("records")]
+    public async Task<IActionResult> CreateRecord([FromBody] DnsRecord record)
+    {
+        var created = await _dnsService.CreateRecordAsync(record);
+        return CreatedAtAction(nameof(GetRecords), new { id = created.Id }, created);
+    }
+
+    [HttpPut("records/{id:guid}")]
+    public async Task<IActionResult> UpdateRecord(Guid id, [FromBody] DnsRecord record)
+    {
+        var updated = await _dnsService.UpdateRecordAsync(id, record);
+        if (updated == null) return NotFound();
+        return Ok(updated);
+    }
+
+    [HttpDelete("records/{id:guid}")]
+    public async Task<IActionResult> DeleteRecord(Guid id)
+    {
+        var deleted = await _dnsService.DeleteRecordAsync(id);
+        if (!deleted) return NotFound();
+        return NoContent();
+    }
 }
