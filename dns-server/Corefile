@@ -1,5 +1,4 @@
 .:53 {
-    bind 0.0.0.0
     health
     prometheus :9153
     
@@ -28,6 +27,5 @@
 
 # Health check / debug endpoint
 .:8053 {
-    bind 0.0.0.0
     whoami
 }
