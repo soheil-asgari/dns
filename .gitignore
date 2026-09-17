@@ -24,7 +24,8 @@ Thumbs.db
 
 # Docker
 **/.db_data/
-**/data/
+/data/
+!backend-api/src/Infrastructure/Data/
 
 # Build
 panel-frontend/dist/

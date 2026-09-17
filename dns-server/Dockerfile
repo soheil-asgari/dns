@@ -4,7 +4,7 @@ COPY go.mod go.sum ./
 # Run tidy to auto-generate or update go.sum entries when empty/missing
 RUN go mod tidy
 COPY . .
-RUN CGO_ENABLED=0 go build -o /coredns ./cmd/coremain/
+RUN CGO_ENABLED=0 go build -mod=mod -o /coredns ./cmd/coremain/
 
 FROM alpine:3.19
 RUN apk --no-cache add ca-certificates
