@@ -1,0 +1,35 @@
+name: Docker Build & CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    name: Build and Verify Images
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build CoreDNS Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./dns-server
+          file: ./dns-server/Dockerfile
+          push: false
+          tags: dns-coredns:latest
+
+      - name: Build Backend API Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend-api
+          file: ./backend-api/Dockerfile
+          push: false
+          tags: dns-backend-api:latest

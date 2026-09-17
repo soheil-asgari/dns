@@ -1,3 +1,5 @@
+namespace Application.Interfaces;
+
 public interface IDnsService
 {
     Task<DnsResolutionResult> ResolveDomainAsync(string domain);
