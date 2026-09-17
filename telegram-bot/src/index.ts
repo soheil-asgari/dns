@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { Telegraf, session } from 'telegraf';
-import { Redis } from 'telegraf-session-redis';
+import RedisSession from 'telegraf-session-redis';
 import pino from 'pino';
 import { startHandler, helpHandler } from './commands/start.js';
 import { dnsHandler } from './commands/dns.js';
@@ -12,12 +12,17 @@ const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 const bot = new Telegraf(process.env.BOT_TOKEN!);
 
 // Session middleware with Redis
-const sessionStore = new Redis({
-  url: process.env.REDIS_URL || 'redis://redis:6379',
+const redisUrl = new URL(process.env.REDIS_URL || 'redis://redis:6379');
+const sessionStore = new RedisSession({
+  store: {
+    host: redisUrl.hostname,
+    port: Number(redisUrl.port) || 6379,
+    ...(redisUrl.password ? { password: redisUrl.password } : {}),
+  },
   ttl: 86400,
 });
 
-bot.use(session({ store: sessionStore }));
+bot.use(sessionStore.middleware());
 bot.use(async (ctx, next) => {
   const start = Date.now();
   await next();
