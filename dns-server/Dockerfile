@@ -1,9 +1,9 @@
 FROM golang:1.21-alpine AS builder
 WORKDIR /src
-COPY go.mod go.sum ./
-# Run tidy to auto-generate or update go.sum entries when empty/missing
-RUN go mod tidy
+COPY go.mod go.sum* ./
 COPY . .
+# Run tidy with source code present to resolve imports and populate go.sum
+RUN go mod tidy
 RUN CGO_ENABLED=0 go build -mod=mod -o /coredns ./cmd/coremain/
 
 FROM alpine:3.19

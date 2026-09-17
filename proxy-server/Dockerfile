@@ -1,5 +1,18 @@
 FROM haproxy:2.8-alpine
 
+USER root
+
+# Prepare required haproxy directories and self-signed SSL certificate fallback
+RUN apk add --no-cache openssl && \
+    mkdir -p /var/lib/haproxy /var/run/haproxy /etc/ssl/certs && \
+    chown -R haproxy:haproxy /var/lib/haproxy /var/run/haproxy && \
+    openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
+        -keyout /tmp/key.pem -out /tmp/cert.pem \
+        -subj "/CN=localhost" && \
+    cat /tmp/key.pem /tmp/cert.pem > /etc/ssl/certs/haproxy.pem && \
+    chmod 600 /etc/ssl/certs/haproxy.pem && \
+    rm -f /tmp/key.pem /tmp/cert.pem
+
 COPY haproxy.cfg /usr/local/etc/haproxy/haproxy.cfg
 
 EXPOSE 80 443 8053 8404
