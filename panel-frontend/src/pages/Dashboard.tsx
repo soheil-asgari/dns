@@ -1,8 +1,6 @@
-import { useEffect } from 'react';
 import { useQuery } from 'react-query';
 import { Globe, Gamepad2, Shield, Activity } from 'lucide-react';
 import { dnsApi } from '../services/api';
-import { useDnsStore } from '../store/dnsStore';
 
 const statCards = [
   { label: 'Total Queries', value: '12,847', icon: Activity, change: '+12%', color: 'text-emerald-500' },

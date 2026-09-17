@@ -1,4 +1,4 @@
-import { BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
+import { BarChart3, TrendingUp } from 'lucide-react';
 
 export default function Analytics() {
   return (
