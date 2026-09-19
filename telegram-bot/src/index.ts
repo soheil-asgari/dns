@@ -137,6 +137,10 @@ async function init() {
         return;
       }
       if (!reply) return;
+      if (!isTokenFormatValid(reply)) {
+        logger.warn({ payload: reply.slice(0, 5) + '...' }, 'Received invalid bot token via Redis pub/sub, ignoring');
+        return;
+      }
       logger.info('Bot token changed via Redis pub/sub, restarting...');
       await startBot(reply);
     });
