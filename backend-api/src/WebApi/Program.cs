@@ -68,6 +68,12 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<IDnsService, DnsService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 
+// ZarinPal payment gateway
+builder.Services.AddHttpClient<ZarinPalPaymentService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
 // CORS
 builder.Services.AddCors(options =>
 {

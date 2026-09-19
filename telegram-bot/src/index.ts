@@ -150,6 +150,37 @@ async function init() {
     const errMsg = err instanceof Error ? err.message : String(err);
     logger.warn({ err: errMsg }, 'Redis pub/sub subscription failed (non-critical)');
   }
+
+  // Subscribe to payment notifications
+  try {
+    const { createClient } = await import('redis');
+    const redisUrl = process.env.REDIS_URL || 'redis://redis:6379';
+    const paymentSub: any = createClient({ url: redisUrl });
+    await paymentSub.subscribe('payment:notify', async (message: string) => {
+      if (!message || !bot) return;
+      try {
+        const payload = JSON.parse(message);
+        if (payload.type === 'payment_success' && payload.telegramId) {
+          const endDate = new Date(payload.endDate).toLocaleDateString('fa-IR') + ' ' + new Date(payload.endDate).toLocaleTimeString('fa-IR');
+          await bot.telegram.sendMessage(
+            payload.telegramId,
+            `✅ *پرداخت شما با موفقیت انجام شد!*\n\n` +
+            `🧾 کد پیگیری: \`${payload.refId}\`\n` +
+            `📦 پلن: ${payload.planTitle}\n` +
+            `💰 مبلغ: ${payload.amount.toLocaleString('fa-IR')} تومان\n` +
+            `📅 اشتراک شما تا تاریخ *${endDate}* تمدید گردید.\n\n` +
+            `⚡️ لطفاً آی‌پی اینترنت خود را مجدداً ثبت کنید.`,
+            { parse_mode: 'Markdown' }
+          );
+        }
+      } catch (e) {
+        logger.warn({ err: e }, 'Failed to process payment notification');
+      }
+    });
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    logger.warn({ err: errMsg }, 'Payment notification subscriber failed (non-critical)');
+  }
 }
 
 // Health endpoint for HAProxy

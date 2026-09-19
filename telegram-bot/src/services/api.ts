@@ -122,3 +122,42 @@ export function buildQuickRegisterUrl(telegramId: number): string {
   const baseUrl = process.env.PORTAL_PUBLIC_URL || 'https://dns.rhynoai.ir';
   return `${baseUrl}/ip?id=${telegramId}&sign=${sign}`;
 }
+
+// === Payment / Checkout API ===
+
+export interface PlanDto {
+  id: string;
+  title: string;
+  price: number;
+  durationDays: number;
+}
+
+export async function getPlans(): Promise<PlanDto[]> {
+  const { data } = await api.get('/api/payment/plans');
+  return data.plans as PlanDto[];
+}
+
+export async function applyDiscount(code: string, planId: string) {
+  const { data } = await api.post('/api/payment/apply-discount', { code, planId });
+  return data as {
+    discountId: string;
+    originalPrice: number;
+    discountedPrice: number;
+    percent: number;
+    code: string;
+  };
+}
+
+export async function checkout(telegramId: number, planId: string, discountCode?: string) {
+  const { data } = await api.post('/api/payment/checkout', {
+    telegramId,
+    planId,
+    ...(discountCode ? { discountCode } : {}),
+  });
+  return data as {
+    paymentUrl: string;
+    authority: string;
+    transactionId: string;
+    amount: number;
+  };
+}

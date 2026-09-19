@@ -16,6 +16,9 @@ public class AppDbContext : DbContext
     public DbSet<Subscription> Subscriptions { get; set; } = null!;
     public DbSet<AdminUser> AdminUsers { get; set; } = null!;
     public DbSet<SystemSetting> SystemSettings { get; set; } = null!;
+    public DbSet<Plan> Plans { get; set; } = null!;
+    public DbSet<DiscountCode> DiscountCodes { get; set; } = null!;
+    public DbSet<PaymentTransaction> PaymentTransactions { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -64,6 +67,52 @@ public class AppDbContext : DbContext
             entity.HasKey(e => e.Key);
             entity.Property(e => e.Key).HasMaxLength(256).IsRequired();
             entity.Property(e => e.Value).IsRequired();
+        });
+
+        // Plan configuration
+        modelBuilder.Entity<Plan>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Title).HasMaxLength(256).IsRequired();
+            entity.Property(e => e.Price).IsRequired();
+            entity.Property(e => e.DurationDays).IsRequired();
+        });
+
+        // DiscountCode configuration
+        modelBuilder.Entity<DiscountCode>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Code).IsUnique();
+            entity.Property(e => e.Code).HasMaxLength(64).IsRequired();
+            entity.Property(e => e.Percent).IsRequired();
+        });
+
+        // PaymentTransaction configuration
+        modelBuilder.Entity<PaymentTransaction>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Amount).IsRequired();
+            entity.Property(e => e.Status).IsRequired();
+            entity.Property(e => e.Authority).HasMaxLength(256);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Plan)
+                .WithMany()
+                .HasForeignKey(e => e.PlanId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.DiscountCode)
+                .WithMany()
+                .HasForeignKey(e => e.DiscountCodeId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => e.Authority);
+            entity.HasIndex(e => e.TelegramId);
         });
     }
 }

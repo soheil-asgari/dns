@@ -27,6 +27,18 @@ public class AppDbContextSeed
             context.GamingDomains.AddRange(gamingDomains);
         }
 
+        // Seed default plans if empty
+        if (!await context.Plans.AnyAsync())
+        {
+            context.Plans.Add(new Plan
+            {
+                Title = "اشتراک ۱ ماهه (۳۰ روز)",
+                Price = 100000,
+                DurationDays = 30,
+                IsActive = true
+            });
+        }
+
         // Seed default admin user if not present
         if (!await context.AdminUsers.AnyAsync(u => u.Username == "admin"))
         {

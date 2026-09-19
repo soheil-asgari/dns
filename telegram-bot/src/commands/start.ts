@@ -1,6 +1,6 @@
 import type { Context } from 'telegraf';
 import { Markup } from 'telegraf';
-import { getOrCreateUser, getSubscriptionStatus, registerIp, detectIp, buildQuickRegisterUrl } from '../services/api.js';
+import { getOrCreateUser, getSubscriptionStatus, registerIp, detectIp, buildQuickRegisterUrl, getPlans, applyDiscount, checkout } from '../services/api.js';
 
 function formatTimeSpan(ts: { hours?: number; minutes?: number; seconds?: number } | string): string {
   if (typeof ts === 'string') {
@@ -26,7 +26,7 @@ function formatTimeSpan(ts: { hours?: number; minutes?: number; seconds?: number
 // Persistent reply keyboard markup
 const mainKeyboard = Markup.keyboard([
   ['🔍 وضعیت و آی‌پی من', '⚡️ ثبت آی‌پی من'],
-  ['📖 راهنمای تنظیم DNS'],
+  ['💳 خرید و تمدید اشتراک', '📖 راهنمای تنظیم DNS'],
 ]).resize().persistent();
 
 export async function startHandler(ctx: Context) {
@@ -141,6 +141,57 @@ async function handlePersistentKeyboard(ctx: Context, text: string, telegramId: 
       return true;
     }
 
+    case '💳 خرید و تمدید اشتراک': {
+      try {
+        const plans = await getPlans();
+        if (!plans || plans.length === 0) {
+          await ctx.reply('❌ هیچ پلن فعالی یافت نشد.', { ...mainKeyboard });
+          return true;
+        }
+
+        if (plans.length === 1) {
+          const plan = plans[0];
+          await ctx.reply(
+            `📦 *${plan.title}*\n` +
+            `💰 مبلغ: *${plan.price.toLocaleString('fa-IR')}* تومان\n\n` +
+            `آیا کد تخفیف دارید؟`,
+            {
+              parse_mode: 'Markdown',
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    { text: '🎁 ثبت کد تخفیف', callback_data: `single_discount_${plan.id}` },
+                    { text: '➡️ پرداخت بدون تخفیف', callback_data: `single_nodiscount_${plan.id}` },
+                  ]
+                ]
+              }
+            }
+          );
+        } else {
+          const lines = plans.map((p, i) =>
+            `${i + 1}. ${p.title} — ${p.price.toLocaleString('fa-IR')} تومان`
+          );
+          const inlineButtons = plans.map(p => [
+            Markup.button.callback(`📦 ${p.title}`, `select_plan_${p.id}`)
+          ]);
+
+          await ctx.reply(
+            '💳 *خرید و تمدید اشتراک*\n\n' +
+            'پلن‌های موجود:\n' +
+            lines.join('\n') + '\n\n' +
+            'لطفاً پلن مورد نظر خود را انتخاب کنید:',
+            {
+              parse_mode: 'Markdown',
+              reply_markup: { inline_keyboard: inlineButtons }
+            }
+          );
+        }
+      } catch {
+        await ctx.reply('❌ خطا در دریافت پلن‌ها. لطفاً دوباره تلاش کنید.', { ...mainKeyboard });
+      }
+      return true;
+    }
+
     case '📖 راهنمای تنظیم DNS': {
       await ctx.reply(
         '⚙️ *راهنمای تنظیم DNS*\n\n' +
@@ -240,21 +291,112 @@ export async function setupCallbacks(bot: any) {
     );
   });
 
-  bot.action('buy_subscription', async (ctx: any) => {
+  // Payment: select plan (multi-plan flow)
+  bot.action(/^select_plan_/, async (ctx: any) => {
     await ctx.answerCbQuery();
+    const planId = ctx.match[0].replace('select_plan_', '');
+    const telegramId = ctx.from?.id;
+    if (!telegramId || !planId) return;
+
+    // Store planId in session
+    ctx.session = ctx.session || {};
+    ctx.session.selectedPlanId = planId;
+    ctx.session.awaitingDiscount = true;
+
     await ctx.reply(
-      '💳 *خرید اشتراک*\n\n' +
-      'برای خرید اشتراک با مدیریت تماس بگیرید:\n' +
-      '@admin_username\n\n' +
-      'پلن‌های موجود:\n' +
-      '• ماهانه: ۱۰۰,۰۰۰ تومان\n' +
-      '• سه ماهه: ۲۵۰,۰۰۰ تومان\n' +
-      '• سالانه: ۸۰۰,۰۰۰ تومان',
-      { parse_mode: 'Markdown', ...mainKeyboard }
+      '🎫 آیا کد تخفیف دارید؟\n\n' +
+      'کد تخفیف خود را ارسال کنید، در غیر این صورت دکمه «بدون تخفیف» را بزنید.',
+      {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '🚫 بدون تخفیف', callback_data: 'no_discount' }]
+          ]
+        }
+      }
     );
   });
 
-  // Handle manual IP text input
+  // Payment: single-plan with discount
+  bot.action(/^single_discount_/, async (ctx: any) => {
+    await ctx.answerCbQuery();
+    const planId = ctx.match[0].replace('single_discount_', '');
+    const telegramId = ctx.from?.id;
+    if (!telegramId || !planId) return;
+
+    ctx.session = ctx.session || {};
+    ctx.session.selectedPlanId = planId;
+    ctx.session.awaitingDiscount = true;
+
+    await ctx.reply(
+      '🎫 *ثبت کد تخفیف*\n\n' +
+      'لطفاً کد تخفیف خود را ارسال کنید.',
+      { parse_mode: 'Markdown' }
+    );
+  });
+
+  // Payment: single-plan no discount (immediate checkout)
+  bot.action(/^single_nodiscount_/, async (ctx: any) => {
+    await ctx.answerCbQuery();
+    const planId = ctx.match[0].replace('single_nodiscount_', '');
+    const telegramId = ctx.from?.id;
+    if (!telegramId || !planId) return;
+
+    ctx.session = ctx.session || {};
+    await proceedToCheckout(ctx, planId, undefined);
+  });
+
+  // Payment: no discount
+  bot.action('no_discount', async (ctx: any) => {
+    await ctx.answerCbQuery();
+    ctx.session = ctx.session || {};
+    ctx.session.awaitingDiscount = false;
+    await proceedToCheckout(ctx, ctx.session.selectedPlanId, undefined);
+  });
+
+  // Handle discount code text input (after plan selection)
+  // This is handled in the text handler below.
+
+  async function proceedToCheckout(ctx: any, planId: string, discountCode?: string) {
+    const telegramId = ctx.from?.id;
+    if (!telegramId) return;
+
+    try {
+      let finalAmount: number;
+      let planTitle = '';
+
+      if (discountCode) {
+        const discountResult = await applyDiscount(discountCode, planId);
+        finalAmount = discountResult.discountedPrice;
+        planTitle = ''; // We'll get it from checkout response
+      }
+
+      const checkoutResult = await checkout(telegramId, planId, discountCode);
+
+      await ctx.reply(
+        '🏷 *پلن انتخابی:* ' + checkoutResult.amount.toLocaleString('fa-IR') + ' تومان\n' +
+        '💰 *مبلغ نهایی:* ' + checkoutResult.amount.toLocaleString('fa-IR') + ' تومان\n\n' +
+        'جهت تکمیل خرید روی لینک زیر کلیک کنید:',
+        {
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '🔗 ورود به درگاه پرداخت زرین‌پال (شاپرک)', url: checkoutResult.paymentUrl }]
+            ]
+          }
+        }
+      );
+
+      // Reset session
+      ctx.session.selectedPlanId = null;
+      ctx.session.awaitingDiscount = false;
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || 'خطا در ایجاد تراکنش';
+      await ctx.reply('❌ ' + msg, { ...mainKeyboard });
+    }
+  }
+
+  // Handle discount code input (after plan selection)
   bot.on('text', async (ctx: any, next: any) => {
     // Skip commands
     if (ctx.message?.text?.startsWith('/')) {
@@ -265,6 +407,14 @@ export async function setupCallbacks(bot: any) {
     const text = ctx.message?.text?.trim();
 
     if (!telegramId || !text) return next();
+
+    // Check if awaiting discount code
+    ctx.session = ctx.session || {};
+    if (ctx.session.awaitingDiscount && ctx.session.selectedPlanId) {
+      ctx.session.awaitingDiscount = false;
+      await proceedToCheckout(ctx, ctx.session.selectedPlanId, text);
+      return;
+    }
 
     // Check if it matches a persistent keyboard command first
     const handled = await handlePersistentKeyboard(ctx, text, telegramId);
