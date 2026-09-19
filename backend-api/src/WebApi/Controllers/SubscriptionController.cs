@@ -72,22 +72,26 @@ public class SubscriptionController : ControllerBase
         if (!string.Equals(sign, expectedSign, StringComparison.OrdinalIgnoreCase))
             return Content("<html><body><h3>❌ Invalid signature</h3></body></html>", "text/html");
 
-        // Extract real client IP (trust X-Forwarded-For first)
-        var forwardedFor = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        // Extract real client IP (ArvanCloud CDN sends Ar-Real-IP)
         string? ipString = null;
-        if (!string.IsNullOrWhiteSpace(forwardedFor))
-        {
-            ipString = forwardedFor.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .FirstOrDefault();
-        }
 
+        // Priority 1: ArvanCloud Ar-Real-IP header
+        var arRealIp = HttpContext.Request.Headers["Ar-Real-IP"].FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(arRealIp))
+            ipString = arRealIp;
+
+        // Priority 2: X-Forwarded-For (from nginx reverse proxy)
         if (string.IsNullOrWhiteSpace(ipString))
         {
-            var realIp = HttpContext.Request.Headers["X-Real-IP"].FirstOrDefault();
-            if (!string.IsNullOrWhiteSpace(realIp))
-                ipString = realIp;
+            var forwardedFor = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(forwardedFor))
+            {
+                ipString = forwardedFor.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .FirstOrDefault();
+            }
         }
 
+        // Priority 3: Direct TCP connection IP
         if (string.IsNullOrWhiteSpace(ipString))
         {
             var remoteIp = HttpContext.Connection.RemoteIpAddress;

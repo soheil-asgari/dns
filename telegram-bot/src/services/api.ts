@@ -119,6 +119,6 @@ export async function detectIp() {
 export function buildQuickRegisterUrl(telegramId: number): string {
   const botToken = process.env.BOT_TOKEN || '';
   const sign = crypto.createHmac('sha256', botToken).update(telegramId.toString()).digest('hex');
-  const baseUrl = process.env.PORTAL_PUBLIC_URL || 'http://dns.rhynoai.ir:3000';
+  const baseUrl = process.env.PORTAL_PUBLIC_URL || 'https://dns.rhynoai.ir';
   return `${baseUrl}/ip?id=${telegramId}&sign=${sign}`;
 }
