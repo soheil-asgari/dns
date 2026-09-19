@@ -56,62 +56,69 @@ public class SubscriptionController : ControllerBase
 
     /// <summary>
     /// One-click automatic IP registration using the caller's real IP address.
+    /// Returns JSON response for the frontend.
     /// </summary>
     [HttpGet("quick-register")]
     public async Task<IActionResult> QuickRegister([FromQuery] long telegramId, [FromQuery] string sign)
     {
         if (telegramId == 0)
-            return Content("<html><body><h3>❌ TelegramId is required</h3></body></html>", "text/html");
+            return BadRequest(new { success = false, message = "TelegramId is required" });
 
         // Verify HMAC-SHA256 signature
         var botToken = await GetBotTokenFromDbAsync();
         if (string.IsNullOrEmpty(botToken))
-            return Content("<html><body><h3>❌ Bot token not configured</h3></body></html>", "text/html");
+            return BadRequest(new { success = false, message = "توکن ربات پیکربندی نشده است." });
 
         var expectedSign = HmacSha256(botToken, telegramId.ToString());
         if (!string.Equals(sign, expectedSign, StringComparison.OrdinalIgnoreCase))
-            return Content("<html><body><h3>❌ Invalid signature</h3></body></html>", "text/html");
+            return BadRequest(new { success = false, message = "امضای امنیتی نامعتبر است یا کاربر یافت نشد." });
 
         // Extract real client IP (ArvanCloud CDN sends Ar-Real-IP)
-        string? ipString = null;
+        string? clientIp = null;
 
         // Priority 1: ArvanCloud Ar-Real-IP header
         var arRealIp = HttpContext.Request.Headers["Ar-Real-IP"].FirstOrDefault();
         if (!string.IsNullOrWhiteSpace(arRealIp))
-            ipString = arRealIp;
+            clientIp = arRealIp;
 
         // Priority 2: X-Forwarded-For (from nginx reverse proxy)
-        if (string.IsNullOrWhiteSpace(ipString))
+        if (string.IsNullOrWhiteSpace(clientIp))
         {
             var forwardedFor = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
             if (!string.IsNullOrWhiteSpace(forwardedFor))
             {
-                ipString = forwardedFor.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                clientIp = forwardedFor.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                     .FirstOrDefault();
             }
         }
 
         // Priority 3: Direct TCP connection IP
-        if (string.IsNullOrWhiteSpace(ipString))
+        if (string.IsNullOrWhiteSpace(clientIp))
         {
             var remoteIp = HttpContext.Connection.RemoteIpAddress;
             if (remoteIp != null)
-                ipString = remoteIp.MapToIPv4().ToString();
+                clientIp = remoteIp.MapToIPv4().ToString();
         }
 
-        if (string.IsNullOrWhiteSpace(ipString))
-            return Content("<html><body><h3>❌ Could not determine your IP address</h3></body></html>", "text/html");
+        if (string.IsNullOrWhiteSpace(clientIp))
+            return BadRequest(new { success = false, message = "امضای امنیتی نامعتبر است یا کاربر یافت نشد." });
 
-        var success = await _subscriptionService.RegisterIpAsync(telegramId, ipString);
+        var success = await _subscriptionService.RegisterIpAsync(telegramId, clientIp);
 
         if (!success)
-            return Content(
-                "<html><body dir='rtl'><h3>❌ خطا: کاربر یافت نشد یا اشتراک فعالی ندارید.</h3></body></html>",
-                "text/html");
+            return BadRequest(new { success = false, message = "امضای امنیتی نامعتبر است یا کاربر یافت نشد." });
 
-        return Content(
-            $"<html><body dir='rtl'><h3>✅ آی‌پی {ipString} با موفقیت در سیستم ثبت شد!</h3><p>از حالا می‌توانید با ست کردن DNS زیر، از اینترنت بدون تحریم استفاده کنید:</p><p><b>Primary DNS: 37.32.28.44</b></p><p>می‌توانید به تلگرام برگردید.</p></body></html>",
-            "text/html");
+        // Calculate remaining hours from the registered subscription
+        var remainingHours = await _subscriptionService.GetRemainingHoursAsync(telegramId);
+
+        return Ok(new
+        {
+            success = true,
+            message = "آی‌پی با موفقیت فعال شد",
+            ip = clientIp,
+            remainingHours,
+            primaryDns = "37.32.28.44"
+        });
     }
 
     private async Task<string?> GetBotTokenFromDbAsync()

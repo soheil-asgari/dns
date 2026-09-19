@@ -3,36 +3,43 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0f172a" />
-  <meta name="description" content="ثبت و اتصال سریع به DNS Rhyno" />
+  <meta name="theme-color" content="#080a0f" />
+  <meta name="description" content="ثبت و اتصال سریع به شبکه Rhyno DNS" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <title>Rhyno DNS — ثبت سریع</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     :root {
-      --bg-primary: #0b0f1a;
-      --bg-card: #141a2b;
-      --bg-card-hover: #1a2140;
-      --border-glass: rgba(99, 102, 241, 0.15);
-      --glow-primary: rgba(99, 102, 241, 0.3);
-      --glow-success: rgba(34, 197, 94, 0.4);
+      --obsidian: #080a0f;
+      --glass-bg: rgba(17, 24, 39, 0.75);
+      --glass-border: rgba(99, 102, 241, 0.25);
+      --glass-shadow: 0 0 40px -10px rgba(99, 102, 241, 0.35);
+      --neon-indigo: #4f46e5;
+      --neon-cyan: #06b6d4;
+      --neon-indigo-glow: rgba(79, 70, 229, 0.3);
+      --neon-cyan-glow: rgba(6, 182, 212, 0.2);
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
       --text-primary: #e2e8f0;
       --text-secondary: #94a3b8;
       --text-muted: #64748b;
-      --accent: #6366f1;
-      --accent-hover: #4f46e5;
       --success: #22c55e;
+      --success-glow: rgba(34, 197, 94, 0.25);
       --success-bg: rgba(34, 197, 94, 0.1);
       --error: #ef4444;
       --error-bg: rgba(239, 68, 68, 0.1);
-      --radius: 16px;
-      --radius-sm: 10px;
+      --amber: #f59e0b;
+      --radius-card: 24px;
+      --radius-sm: 12px;
+      --radius-xs: 8px;
     }
+
     body {
       font-family: 'Vazirmatn', system-ui, -apple-system, sans-serif;
-      background: var(--bg-primary);
+      background: var(--obsidian);
       color: var(--text-primary);
       min-height: 100vh;
       display: flex;
@@ -40,243 +47,507 @@
       justify-content: center;
       padding: 20px;
       position: relative;
-      overflow-x: hidden;
+      overflow: hidden;
     }
-    body::before {
-      content: '';
+
+    /* ===== Floating Neon Gradient Spheres ===== */
+    .sphere {
       position: fixed;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: radial-gradient(ellipse at 20% 50%, rgba(99,102,241,0.06) 0%, transparent 50%),
-                  radial-gradient(ellipse at 80% 20%, rgba(34,197,94,0.04) 0%, transparent 50%);
+      border-radius: 50%;
       pointer-events: none;
       z-index: 0;
+      animation: sphere-float 20s infinite ease-in-out;
     }
+    .sphere-1 {
+      width: 500px; height: 500px;
+      top: -10%; left: -10%;
+      background: radial-gradient(circle, rgba(79,70,229,0.25) 0%, transparent 70%);
+      filter: blur(80px);
+      animation-delay: 0s;
+    }
+    .sphere-2 {
+      width: 400px; height: 400px;
+      bottom: -15%; right: -10%;
+      background: radial-gradient(circle, rgba(6,182,212,0.2) 0%, transparent 70%);
+      filter: blur(80px);
+      animation-delay: -7s;
+    }
+    .sphere-3 {
+      width: 350px; height: 350px;
+      top: 40%; left: 50%;
+      background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%);
+      filter: blur(80px);
+      animation-delay: -14s;
+    }
+
+    @keyframes sphere-float {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      25% { transform: translate(60px, -40px) scale(1.05); }
+      50% { transform: translate(-30px, 30px) scale(0.95); }
+      75% { transform: translate(40px, 20px) scale(1.02); }
+    }
+
+    /* ===== Glassmorphism Card ===== */
     .card {
       position: relative;
       z-index: 1;
-      background: var(--bg-card);
-      border: 1px solid var(--border-glass);
-      border-radius: var(--radius);
-      padding: 40px 36px;
-      max-width: 480px;
       width: 100%;
-      backdrop-filter: blur(12px);
-      box-shadow: 0 0 40px var(--glow-primary), 0 8px 32px rgba(0,0,0,0.4);
-      transition: box-shadow 0.4s ease;
+      max-width: 480px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-card);
+      padding: 44px 36px 36px;
+      box-shadow: var(--glass-shadow);
+      transition: box-shadow 0.5s ease, border-color 0.5s ease;
     }
-    .card.success { box-shadow: 0 0 50px var(--glow-success), 0 8px 32px rgba(0,0,0,0.4); }
-    .brand { text-align: center; margin-bottom: 28px; }
-    .brand-logo {
-      width: 56px; height: 56px;
-      background: linear-gradient(135deg, var(--accent), #8b5cf6);
-      border-radius: 16px;
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 12px;
-      font-size: 28px;
-      box-shadow: 0 0 20px var(--glow-primary);
+    .card.success {
+      box-shadow: 0 0 50px -8px rgba(34, 197, 94, 0.3), 0 0 40px -10px rgba(99, 102, 241, 0.2);
+      border-color: rgba(34, 197, 94, 0.25);
     }
-    .brand h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
-    .brand p { color: var(--text-secondary); font-size: 13px; margin-top: 4px; }
+
+    /* ===== Ambient glow on card border ===== */
+    .card::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: var(--radius-card);
+      padding: 1px;
+      background: linear-gradient(135deg, rgba(99,102,241,0.3), transparent 40%, transparent 60%, rgba(6,182,212,0.2));
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+      opacity: 0.6;
+    }
+
+    /* ===== Rhino SVG Icon ===== */
+    .brand {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .brand-icon {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 16px;
+      animation: pulse-glow 3s infinite ease-in-out;
+    }
+    .brand-icon svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { filter: drop-shadow(0 0 8px rgba(99,102,241,0.3)); transform: scale(1); }
+      50% { filter: drop-shadow(0 0 20px rgba(99,102,241,0.5)); transform: scale(1.03); }
+    }
+
+    .brand h1 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      background: linear-gradient(135deg, #e2e8f0 0%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .brand p {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    /* ===== IP Badge with Radar Pulse ===== */
     .ip-badge {
-      display: flex; align-items: center; gap: 10px;
-      background: rgba(99,102,241,0.08);
-      border: 1px solid rgba(99,102,241,0.2);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(99, 102, 241, 0.06);
+      border: 1px solid rgba(99, 102, 241, 0.15);
       border-radius: var(--radius-sm);
       padding: 14px 18px;
       margin-bottom: 24px;
       direction: ltr;
       text-align: left;
+      position: relative;
+      overflow: hidden;
+    }
+    .ip-badge::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 0% 50%, rgba(99,102,241,0.05) 0%, transparent 70%);
+      pointer-events: none;
     }
     .ip-badge .ip-label {
-      font-size: 12px; color: var(--text-muted);
-      display: block; margin-bottom: 2px;
-      direction: rtl; text-align: right;
+      font-size: 11px;
+      color: var(--text-muted);
+      display: block;
+      margin-bottom: 2px;
+      direction: rtl;
+      text-align: right;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     .ip-badge .ip-address {
-      font-size: 18px; font-weight: 700;
-      font-family: 'Courier New', monospace;
+      font-size: 18px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
       letter-spacing: 0.5px;
       color: var(--text-primary);
     }
-    .ip-badge .status-dot {
-      width: 10px; height: 10px;
+
+    /* Radar pulse dot */
+    .radar-dot {
+      width: 12px;
+      height: 12px;
       border-radius: 50%;
       flex-shrink: 0;
+      position: relative;
     }
-    .status-dot.idle { background: var(--text-muted); }
-    .status-dot.loading { background: var(--accent); animation: pulse 1s infinite; }
-    .status-dot.registered { background: var(--success); box-shadow: 0 0 8px var(--success); }
-    .status-dot.error { background: var(--error); }
-    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
-    .action-area { text-align: center; margin-bottom: 24px; }
+    .radar-dot.idle {
+      background: var(--amber);
+      box-shadow: 0 0 6px var(--amber);
+      animation: radar-pulse 2s infinite ease-in-out;
+    }
+    .radar-dot.loading {
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      animation: radar-pulse 0.8s infinite ease-in-out;
+    }
+    .radar-dot.registered {
+      background: var(--success);
+      box-shadow: 0 0 12px var(--success-glow);
+      animation: none;
+    }
+    .radar-dot.error {
+      background: var(--error);
+      box-shadow: 0 0 8px var(--error);
+      animation: none;
+    }
+
+    @keyframes radar-pulse {
+      0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5); }
+      50% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+    }
+    .radar-dot.loading {
+      animation-name: radar-pulse-loading;
+    }
+    @keyframes radar-pulse-loading {
+      0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.5); }
+      50% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+    }
+
+    /* ===== Action Button ===== */
+    .action-area {
+      text-align: center;
+      margin-bottom: 16px;
+    }
     .btn-primary {
-      display: inline-flex; align-items: center; gap: 10px;
-      background: linear-gradient(135deg, var(--accent), #4f46e5);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent), var(--neon-indigo));
       color: #fff;
       border: none;
       border-radius: var(--radius-sm);
-      padding: 16px 40px;
+      padding: 16px 32px;
       font-size: 17px;
       font-weight: 600;
       font-family: 'Vazirmatn', system-ui, sans-serif;
       cursor: pointer;
-      transition: transform 0.15s, box-shadow 0.2s;
-      box-shadow: 0 0 20px var(--glow-primary);
-      width: 100%;
-      justify-content: center;
+      transition: transform 0.2s ease, box-shadow 0.3s ease;
+      box-shadow: 0 0 24px -4px var(--neon-indigo-glow);
+      position: relative;
+      overflow: hidden;
     }
-    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 0 30px var(--glow-primary); }
-    .btn-primary:active { transform: translateY(0); }
-    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-    .btn-primary .spinner {
-      width: 20px; height: 20px;
-      border: 2.5px solid rgba(255,255,255,0.3);
+    .btn-primary::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.06) 100%);
+      pointer-events: none;
+    }
+    .btn-primary:hover {
+      transform: scale(1.02);
+      box-shadow: 0 0 36px -2px var(--neon-indigo-glow);
+    }
+    .btn-primary:active {
+      transform: scale(0.98);
+    }
+    .btn-primary:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-primary .spinner-ring {
+      width: 22px;
+      height: 22px;
+      border: 2.5px solid rgba(255,255,255,0.2);
       border-top-color: #fff;
       border-radius: 50%;
       animation: spin 0.7s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .success-animation {
-      text-align: center;
-      margin: 12px 0 20px;
-      display: none;
-    }
-    .success-animation.show { display: block; }
-    .success-checkmark {
-      width: 64px; height: 64px;
-      background: var(--success-bg);
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 12px;
-      position: relative;
-    }
-    .success-checkmark svg {
-      width: 36px; height: 36px;
-    }
-    .success-checkmark .checkmark-path {
-      stroke-dasharray: 50;
-      stroke-dashoffset: 50;
-      animation: drawCheck 0.6s ease forwards;
-    }
-    @keyframes drawCheck { to { stroke-dashoffset: 0; } }
-    .success-text { font-size: 16px; font-weight: 600; color: var(--success); }
-    .countdown-box {
-      background: rgba(99,102,241,0.06);
-      border: 1px solid rgba(99,102,241,0.12);
-      border-radius: var(--radius-sm);
-      padding: 14px 18px;
-      margin-bottom: 20px;
-      display: none;
-      text-align: center;
-    }
-    .countdown-box.show { display: block; }
-    .countdown-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
-    .countdown-value { font-size: 20px; font-weight: 700; color: var(--accent); font-family: 'Courier New', monospace; direction: ltr; }
-    .dns-box {
-      background: rgba(0,0,0,0.2);
-      border-radius: var(--radius-sm);
-      padding: 18px;
-      margin-bottom: 20px;
-      display: none;
-    }
-    .dns-box.show { display: block; }
-    .dns-box-title { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; text-align: center; }
-    .dns-row {
-      display: flex; align-items: center; gap: 10px;
-      margin-bottom: 10px;
-      direction: ltr;
-    }
-    .dns-row:last-child { margin-bottom: 0; }
-    .dns-label { font-size: 12px; color: var(--text-muted); min-width: 30px; flex-shrink: 0; }
-    .dns-value {
-      flex: 1;
-      background: rgba(0,0,0,0.3);
-      border-radius: 8px;
-      padding: 10px 14px;
-      font-family: 'Courier New', monospace;
-      font-size: 15px;
-      font-weight: 500;
-      color: var(--text-primary);
-      border: 1px solid rgba(99,102,241,0.15);
-      direction: ltr;
-      text-align: left;
-      user-select: all;
-    }
-    .btn-copy {
-      background: rgba(99,102,241,0.15);
-      border: 1px solid rgba(99,102,241,0.2);
-      border-radius: 8px;
-      padding: 10px 14px;
-      color: var(--accent);
-      cursor: pointer;
-      font-size: 13px;
-      font-family: 'Vazirmatn', system-ui, sans-serif;
-      transition: background 0.15s;
-      white-space: nowrap;
       flex-shrink: 0;
     }
-    .btn-copy:hover { background: rgba(99,102,241,0.25); }
-    .btn-copy.copied { background: rgba(34,197,94,0.2); color: var(--success); border-color: var(--success); }
-    .btn-back {
-      display: block;
-      text-align: center;
-      padding: 12px;
-      border-radius: var(--radius-sm);
-      background: rgba(99,102,241,0.06);
-      border: 1px solid rgba(99,102,241,0.12);
-      color: var(--text-secondary);
-      text-decoration: none;
-      font-size: 14px;
-      transition: background 0.15s, color 0.15s;
-      margin-top: 8px;
-      display: none;
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
-    .btn-back.show { display: block; }
-    .btn-back:hover { background: rgba(99,102,241,0.12); color: var(--text-primary); }
-    .error-box {
-      background: var(--error-bg);
-      border: 1px solid rgba(239,68,68,0.2);
-      border-radius: var(--radius-sm);
-      padding: 14px 18px;
-      color: var(--error);
-      font-size: 14px;
-      text-align: center;
-      display: none;
-      margin-bottom: 16px;
-    }
-    .error-box.show { display: block; }
+
     .status-text {
       font-size: 13px;
       color: var(--text-muted);
       text-align: center;
-      margin-top: 8px;
+      margin-top: 12px;
+      font-weight: 500;
     }
+
+    /* ===== Error Box ===== */
+    .error-box {
+      background: var(--error-bg);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      color: var(--error);
+      font-size: 13px;
+      text-align: center;
+      display: none;
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+    .error-box.show { display: block; }
+
+    /* ===== Success State ===== */
+    .success-section {
+      text-align: center;
+      margin: 8px 0 20px;
+      display: none;
+    }
+    .success-section.show { display: block; }
+
+    .success-badge {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 16px;
+      background: var(--success-bg);
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .success-badge svg {
+      width: 40px;
+      height: 40px;
+    }
+    .success-badge .check-path {
+      stroke-dasharray: 50;
+      stroke-dashoffset: 50;
+      animation: drawCheck 0.6s ease forwards;
+    }
+    @keyframes drawCheck {
+      to { stroke-dashoffset: 0; }
+    }
+
+    .success-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--success);
+      margin-bottom: 6px;
+    }
+    .success-ip {
+      font-size: 14px;
+      color: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+      direction: ltr;
+      background: rgba(0,0,0,0.25);
+      display: inline-block;
+      padding: 4px 14px;
+      border-radius: var(--radius-xs);
+      border: 1px solid rgba(99,102,241,0.1);
+      margin-bottom: 16px;
+    }
+
+    /* ===== DNS Box ===== */
+    .dns-box {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(99, 102, 241, 0.12);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .dns-box.show { display: block; }
+
+    .dns-box-title {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 14px;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .dns-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      direction: ltr;
+    }
+    .dns-row:last-child { margin-bottom: 0; }
+
+    .dns-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      min-width: 26px;
+      flex-shrink: 0;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .dns-value {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: var(--radius-xs);
+      padding: 10px 14px;
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-primary);
+      border: 1px solid rgba(99, 102, 241, 0.1);
+      direction: ltr;
+      text-align: left;
+      user-select: all;
+    }
+
+    .btn-copy {
+      background: rgba(99, 102, 241, 0.12);
+      border: 1px solid rgba(99, 102, 241, 0.18);
+      border-radius: var(--radius-xs);
+      padding: 10px 14px;
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: 'Vazirmatn', system-ui, sans-serif;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      flex-shrink: 0;
+      min-width: 48px;
+      text-align: center;
+    }
+    .btn-copy:hover {
+      background: rgba(99, 102, 241, 0.22);
+      border-color: rgba(99, 102, 241, 0.3);
+      transform: translateY(-1px);
+    }
+    .btn-copy:active {
+      transform: translateY(0);
+    }
+    .btn-copy.copied {
+      background: rgba(34, 197, 94, 0.15);
+      color: var(--success);
+      border-color: rgba(34, 197, 94, 0.25);
+    }
+
+    /* ===== Back Button ===== */
+    .btn-back {
+      display: none;
+      width: 100%;
+      text-align: center;
+      padding: 14px;
+      border-radius: var(--radius-sm);
+      background: rgba(99, 102, 241, 0.06);
+      border: 1px solid rgba(99, 102, 241, 0.12);
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'Vazirmatn', system-ui, sans-serif;
+      transition: all 0.2s ease;
+      margin-top: 4px;
+    }
+    .btn-back.show { display: block; }
+    .btn-back:hover {
+      background: rgba(99, 102, 241, 0.12);
+      color: var(--text-primary);
+      border-color: rgba(99, 102, 241, 0.2);
+    }
+
+    /* ===== Responsive ===== */
     @media (max-width: 500px) {
-      .card { padding: 28px 20px; }
+      .card { padding: 32px 20px 28px; }
       .brand h1 { font-size: 19px; }
+      .brand-icon { width: 60px; height: 60px; }
       .ip-badge .ip-address { font-size: 15px; }
-      .btn-primary { padding: 14px 24px; font-size: 15px; }
+      .btn-primary { font-size: 15px; padding: 14px 24px; }
+      .success-title { font-size: 16px; }
+      .dns-value { font-size: 13px; padding: 8px 12px; }
+      .btn-copy { padding: 8px 12px; font-size: 11px; min-width: 40px; }
     }
   </style>
 </head>
 <body>
+  <!-- Floating Neon Gradient Spheres -->
+  <div class="sphere sphere-1"></div>
+  <div class="sphere sphere-2"></div>
+  <div class="sphere sphere-3"></div>
+
   <div class="card" id="app">
-    <!-- Brand -->
+    <!-- Brand / Identity -->
     <div class="brand">
-      <div class="brand-logo">🦏</div>
+      <div class="brand-icon">
+        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="rhinoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#6366f1"/>
+              <stop offset="50%" stop-color="#8b5cf6"/>
+              <stop offset="100%" stop-color="#06b6d4"/>
+            </linearGradient>
+          </defs>
+          <!-- Rhino geometric body -->
+          <path d="M30 65 L30 50 Q30 35 42 30 L58 30 Q70 35 70 50 L70 65 Q70 72 62 72 L38 72 Q30 72 30 65Z"
+                fill="url(#rhinoGrad)" opacity="0.9"/>
+          <!-- Head -->
+          <path d="M22 50 Q18 44 20 38 Q22 32 28 32 L34 32 Q30 38 30 45 L30 55 Q28 58 24 56 Q20 54 22 50Z"
+                fill="url(#rhinoGrad)" opacity="0.85"/>
+          <!-- Horn -->
+          <path d="M20 38 Q18 32 20 26 Q22 20 26 18 L24 24 Q22 28 22 34Z"
+                fill="url(#rhinoGrad)" opacity="0.95"/>
+          <!-- Eye -->
+          <circle cx="26" cy="36" r="2.5" fill="#080a0f"/>
+          <!-- Ear -->
+          <path d="M28 32 Q30 26 34 28 Q32 30 30 32Z"
+                fill="url(#rhinoGrad)" opacity="0.7"/>
+          <!-- Legs -->
+          <rect x="34" y="72" width="6" height="12" rx="2" fill="url(#rhinoGrad)" opacity="0.8"/>
+          <rect x="46" y="72" width="6" height="12" rx="2" fill="url(#rhinoGrad)" opacity="0.8"/>
+          <rect x="58" y="72" width="6" height="10" rx="2" fill="url(#rhinoGrad)" opacity="0.8"/>
+          <!-- Tail -->
+          <path d="M70 50 Q76 48 78 52 Q80 56 76 58"
+                stroke="url(#rhinoGrad)" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.7"/>
+        </svg>
+      </div>
       <h1>Rhyno DNS Network</h1>
-      <p>اتصال امن و سریع به اینترنت</p>
+      <p>سرویس رفع تحریم و امنیت شبکه</p>
     </div>
 
     <!-- Error -->
     <div class="error-box" id="errorBox"></div>
 
-    <!-- IP Badge -->
+    <!-- IP Badge with Radar -->
     <div class="ip-badge">
-      <span class="status-dot idle" id="statusDot"></span>
+      <span class="radar-dot idle" id="statusDot"></span>
       <div>
         <span class="ip-label">🌐 آی‌پی اینترنت شما</span>
         <span class="ip-address" id="ipDisplay">—</span>
@@ -286,44 +557,39 @@
     <!-- Action Button -->
     <div class="action-area">
       <button class="btn-primary" id="actionBtn" onclick="handleAction()">
-        <span id="btnText">⚡️ ثبت و اتصال سریع</span>
+        <span id="btnText">⚡️ تایید و اتصال سریع به شبکه</span>
       </button>
     </div>
     <div class="status-text" id="statusText">برای شروع دکمه بالا را بزنید</div>
 
-    <!-- Success Animation -->
-    <div class="success-animation" id="successAnim">
-      <div class="success-checkmark">
+    <!-- Success Section -->
+    <div class="success-section" id="successSection">
+      <div class="success-badge">
         <svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path class="checkmark-path" d="M5 13l4 4L19 7" />
+          <path class="check-path" d="M5 13l4 4L19 7" />
         </svg>
       </div>
-      <div class="success-text">✅ آی‌پی شما با موفقیت ثبت شد!</div>
-    </div>
+      <div class="success-title">اتصال با موفقیت فعال شد!</div>
+      <div class="success-ip" id="successIpDisplay">آی‌پی فعال: —</div>
 
-    <!-- Countdown -->
-    <div class="countdown-box" id="countdownBox">
-      <div class="countdown-label">⏳ زمان باقی‌مانده از اشتراک</div>
-      <div class="countdown-value" id="countdownValue">—</div>
-    </div>
-
-    <!-- DNS Config -->
-    <div class="dns-box" id="dnsBox">
-      <div class="dns-box-title">⚙️ تنظیمات DNS سرور</div>
-      <div class="dns-row">
-        <span class="dns-label">۱</span>
-        <span class="dns-value" id="dnsPrimary">37.32.28.44</span>
-        <button class="btn-copy" onclick="copyDns('dnsPrimary', this)">📋 کپی</button>
+      <!-- DNS Box -->
+      <div class="dns-box show">
+        <div class="dns-box-title">⚙️ تنظیمات DNS سرور</div>
+        <div class="dns-row">
+          <span class="dns-label">۱</span>
+          <span class="dns-value" id="dnsPrimary">37.32.28.44</span>
+          <button class="btn-copy" onclick="copyDns('dnsPrimary', this)">📋 کپی</button>
+        </div>
+        <div class="dns-row">
+          <span class="dns-label">۲</span>
+          <span class="dns-value" id="dnsSecondary">1.1.1.1</span>
+          <button class="btn-copy" onclick="copyDns('dnsSecondary', this)">📋 کپی</button>
+        </div>
       </div>
-      <div class="dns-row">
-        <span class="dns-label">۲</span>
-        <span class="dns-value" id="dnsSecondary">1.1.1.1</span>
-        <button class="btn-copy" onclick="copyDns('dnsSecondary', this)">📋 کپی</button>
-      </div>
-    </div>
 
-    <!-- Back to Bot -->
-    <a class="btn-back" id="backBtn" href="https://t.me/rhyno_dns_bot" target="_blank">↩️ بازگشت به ربات تلگرام</a>
+      <!-- Back to Bot -->
+      <a class="btn-back show" id="backBtn" href="https://t.me/rhyno_dns_bot" target="_blank">↩️ بازگشت به تلگرام</a>
+    </div>
   </div>
 
   <script>
@@ -338,14 +604,10 @@
     const btnText = document.getElementById('btnText');
     const statusText = document.getElementById('statusText');
     const errorBox = document.getElementById('errorBox');
-    const successAnim = document.getElementById('successAnim');
-    const countdownBox = document.getElementById('countdownBox');
-    const countdownValue = document.getElementById('countdownValue');
-    const dnsBox = document.getElementById('dnsBox');
-    const backBtn = document.getElementById('backBtn');
+    const successSection = document.getElementById('successSection');
+    const successIpDisplay = document.getElementById('successIpDisplay');
 
     let detectedIp = '';
-    let countdownInterval = null;
 
     function showError(msg) {
       errorBox.textContent = msg;
@@ -357,17 +619,29 @@
     }
 
     function setStatusDot(state) {
-      statusDot.className = 'status-dot ' + state;
+      statusDot.className = 'radar-dot ' + state;
+    }
+
+    function showSuccess(ip, remainingHours) {
+      // Hide action area
+      actionBtn.style.display = 'none';
+      statusText.style.display = 'none';
+      // Show success
+      setStatusDot('registered');
+      successSection.classList.add('show');
+      successIpDisplay.textContent = 'آی‌پی فعال: ' + ip;
+      document.querySelector('.card').classList.add('success');
     }
 
     function setLoading(isLoading) {
       if (isLoading) {
         actionBtn.disabled = true;
-        btnText.innerHTML = '<span class="spinner"></span> در حال ثبت...';
+        btnText.innerHTML = '<span class="spinner-ring"></span> در حال اعتبارسنجی و ثبت در فایروال...';
         setStatusDot('loading');
-        statusText.textContent = 'در حال اتصال به سرور...';
+        statusText.textContent = 'در حال ارتباط با سرور...';
       } else {
         actionBtn.disabled = false;
+        btnText.innerHTML = '⚡️ تایید و اتصال سریع به شبکه';
       }
     }
 
@@ -392,43 +666,35 @@
       }
     }
 
+    // Parse the new JSON response
+    async function callQuickRegister() {
+      const res = await fetch(`${API_BASE}/subscription/quick-register?telegramId=${telegramId}&sign=${sign}`);
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'خطا در ثبت آی‌پی');
+      }
+      return data;
+    }
+
     // Auto-register if id & sign present
     async function autoRegister() {
       if (telegramId && sign) {
         setLoading(true);
         hideError();
         try {
-          const res = await fetch(`${API_BASE}/subscription/quick-register?telegramId=${telegramId}&sign=${sign}`);
-          const html = await res.text();
-          // Check for error in response HTML
-          if (html.includes('❌')) {
-            setStatusDot('error');
-            statusText.textContent = 'ثبت ناموفق';
-            showError('خطا در ثبت آی‌پی. لطفاً دوباره تلاش کنید یا به ربات مراجعه کنید.');
-            setLoading(false);
-            return;
-          }
-          // Success
+          const data = await callQuickRegister();
           setStatusDot('registered');
           statusText.textContent = '✅ آی‌پی با موفقیت ثبت شد';
-          actionBtn.style.display = 'none';
-          successAnim.classList.add('show');
-          dnsBox.classList.add('show');
-          backBtn.classList.add('show');
-          countdownBox.classList.add('show');
-          document.querySelector('.card').classList.add('success');
-          // Start countdown from 24h
-          startCountdown(24 * 3600);
+          showSuccess(data.ip, data.remainingHours);
         } catch (err) {
           setStatusDot('error');
-          statusText.textContent = 'خطای شبکه';
-          showError('خطا در ارتباط با سرور. لطفاً دوباره تلاش کنید.');
+          statusText.textContent = 'ثبت ناموفق';
+          showError(err.message || 'خطا در ثبت آی‌پی. لطفاً دوباره تلاش کنید یا به ربات مراجعه کنید.');
           setLoading(false);
         }
       } else {
-        // No params - just show UI ready for manual click
-        actionBtn.disabled = false;
-        statusText.textContent = 'برای ثبت آی‌پی دکمه بالا را بزنید';
+        actionBtn.disabled = true;
+        statusText.textContent = 'لینک معتبر نیست. از ربات تلگرام استفاده کنید.';
       }
     }
 
@@ -444,49 +710,23 @@
       setLoading(true);
       hideError();
       try {
-        const res = await fetch(`${API_BASE}/subscription/quick-register?telegramId=${telegramId}&sign=${sign}`);
-        const html = await res.text();
-        if (html.includes('❌')) {
-          setStatusDot('error');
-          statusText.textContent = 'ثبت ناموفق';
-          showError('خطا در ثبت آی‌پی. لطفاً به ربات مراجعه کنید.');
-          setLoading(false);
-          return;
-        }
+        const data = await callQuickRegister();
         setStatusDot('registered');
         statusText.textContent = '✅ ثبت موفق';
-        actionBtn.style.display = 'none';
-        successAnim.classList.add('show');
-        dnsBox.classList.add('show');
-        backBtn.classList.add('show');
-        countdownBox.classList.add('show');
-        document.querySelector('.card').classList.add('success');
-        startCountdown(24 * 3600);
+        showSuccess(data.ip, data.remainingHours);
       } catch (err) {
         setStatusDot('error');
         statusText.textContent = 'خطای شبکه';
-        showError('خطا در ارتباط با سرور.');
+        showError(err.message || 'خطا در ارتباط با سرور.');
         setLoading(false);
       }
-    }
-
-    function startCountdown(seconds) {
-      function tick() {
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        const s = seconds % 60;
-        countdownValue.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-        if (seconds > 0) seconds--;
-      }
-      tick();
-      countdownInterval = setInterval(tick, 1000);
     }
 
     async function copyDns(elementId, btn) {
       const text = document.getElementById(elementId).textContent;
       try {
         await navigator.clipboard.writeText(text);
-        btn.textContent = '✅ کپی شد';
+        btn.textContent = '✅ کپی شد!';
         btn.classList.add('copied');
         setTimeout(() => {
           btn.textContent = '📋 کپی';
@@ -500,7 +740,7 @@
         textarea.select();
         document.execCommand('copy');
         document.body.removeChild(textarea);
-        btn.textContent = '✅ کپی شد';
+        btn.textContent = '✅ کپی شد!';
         btn.classList.add('copied');
         setTimeout(() => {
           btn.textContent = '📋 کپی';

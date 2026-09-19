@@ -173,6 +173,24 @@ public class SubscriptionService : ISubscriptionService
         return true;
     }
 
+    public async Task<int> GetRemainingHoursAsync(long telegramId)
+    {
+        var user = await _context.Users
+            .Include(u => u.Subscriptions)
+            .FirstOrDefaultAsync(u => u.TelegramId == telegramId);
+
+        if (user == null) return 0;
+
+        var activeSub = user.Subscriptions
+            .Where(s => s.IsActive && s.EndDate > DateTime.UtcNow)
+            .OrderByDescending(s => s.EndDate)
+            .FirstOrDefault();
+
+        if (activeSub == null) return 0;
+
+        return (int)Math.Ceiling((activeSub.EndDate - DateTime.UtcNow).TotalHours);
+    }
+
     private static SubscriptionDto MapSubscriptionDto(Subscription s)
     {
         return new SubscriptionDto
