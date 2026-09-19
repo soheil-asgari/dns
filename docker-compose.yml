@@ -94,7 +94,7 @@ services:
       context: ./telegram-bot
       dockerfile: Dockerfile
     extra_hosts:
-      - "api.telegram.org:37.32.28.44"
+      - "api.telegram.org:10.10.0.1"
     environment:
       BOT_TOKEN: ${BOT_TOKEN:-}
       API_URL: http://backend-api:8080
