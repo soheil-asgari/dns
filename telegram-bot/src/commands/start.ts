@@ -43,14 +43,12 @@ export async function startHandler(ctx: Context) {
       `سلام ${firstName || 'کاربر'}! 👋\n\n` +
       `✅ اشتراک آزمایشی ۲۴ ساعته شما فعال شد.\n` +
       `⏳ زمان باقی‌مانده: *${remaining}*\n\n` +
-      `لطفاً آی‌پی اینترنت خود را ثبت کنید تا سرویس فعال شود.`,
+      `برای فعال‌سازی و اتصال به سرور، لطفاً آی‌پی عمومی اینترنت خود را به صورت پیام متنی ارسال کنید (مثال: \`1.2.3.4\`).`,
       {
         parse_mode: 'Markdown',
         ...Markup.inlineKeyboard([
-          [Markup.button.webApp('🌐 ثبت خودکار آی‌پی اینترنت', `${process.env.API_URL || 'http://backend-api:8080'}/api/ip/detect`)] as any,
-          [Markup.button.callback('✏️ ثبت دستی آی‌پی', 'manual_ip')],
-          [Markup.button.callback('📊 وضعیت اشتراک', 'subscription_status')],
-          [Markup.button.callback('⚙️ راهنمای تنظیم DNS', 'dns_guide')],
+          [Markup.button.url('🌐 مشاهده آی‌پی من', 'https://icanhazip.com')],
+          [Markup.button.callback('📝 راهنمای تنظیم DNS', 'dns_guide')],
         ]),
       }
     );
@@ -84,10 +82,10 @@ export async function startHandler(ctx: Context) {
   await ctx.reply(message, {
     parse_mode: 'Markdown',
     ...Markup.inlineKeyboard([
-      [Markup.button.webApp('🌐 ثبت خودکار آی‌پی اینترنت', `${process.env.API_URL || 'http://backend-api:8080'}/api/ip/detect`)] as any,
+      [Markup.button.url('🌐 مشاهده آی‌پی من', 'https://icanhazip.com')],
       [Markup.button.callback('✏️ ثبت دستی آی‌پی', 'manual_ip')],
       [Markup.button.callback('📊 وضعیت اشتراک و زمان باقی‌مانده', 'subscription_status')],
-      [Markup.button.callback('⚙️ راهنمای تنظیم DNS', 'dns_guide')],
+      [Markup.button.callback('📝 راهنمای تنظیم DNS', 'dns_guide')],
       ...(status.hasActiveSubscription ? [] : [[Markup.button.callback('💳 خرید اشتراک', 'buy_subscription')]] as any),
     ]),
   });

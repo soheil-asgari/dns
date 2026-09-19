@@ -136,7 +136,7 @@ async function init() {
     const { createClient } = await import('redis');
     const redisUrl = process.env.REDIS_URL || 'redis://redis:6379';
     const subscriber: any = createClient({ url: redisUrl });
-    await subscriber.connect();
+    // redis v2 connects automatically; no .connect() call needed (avoids "subscriber.connect is not a function")
     await subscriber.subscribe('config:bot_token_changed', (message: string) => {
       if (!message) return;
       if (!isTokenFormatValid(message)) {
