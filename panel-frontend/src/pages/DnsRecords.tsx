@@ -20,6 +20,8 @@ export default function DnsRecords() {
   };
 
   useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
     dnsApi.getRecords()
       .then((res) => setRecords(res.data))
       .catch((err) => {

@@ -17,6 +17,8 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
     api.get('/settings/bot-token').then((res) => {
       setBotToken(res.data.token);
       setOriginalToken(res.data.token);
