@@ -59,12 +59,19 @@ public class DnsService : IDnsService
 
     public async Task SyncDnsToRedisAsync()
     {
-        var domains = await _context.GamingDomains
+        var gamingDomains = await _context.GamingDomains
             .Where(g => g.IsActive)
             .Select(g => g.Domain)
             .ToListAsync();
 
-        var json = JsonSerializer.Serialize(domains);
+        var dnsRecordDomains = await _context.DnsRecords
+            .Where(r => r.IsActive)
+            .Select(r => r.Domain)
+            .ToListAsync();
+
+        var allDomains = gamingDomains.Concat(dnsRecordDomains).Distinct().ToList();
+
+        var json = JsonSerializer.Serialize(allDomains);
         await _cache.SetStringAsync("gaming:domains", json, new DistributedCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1)

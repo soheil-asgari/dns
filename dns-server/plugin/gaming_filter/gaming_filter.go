@@ -2,6 +2,7 @@ package gaming_filter
 
 import (
 	"context"
+	"encoding/json"
 	"net"
 	"sync"
 	"time"
@@ -114,8 +115,12 @@ func (gf *GamingFilter) modifyResponse(ctx context.Context, w dns.ResponseWriter
 func (gf *GamingFilter) refreshDomains() {
 	ticker := time.NewTicker(gf.refreshInterval)
 	for range ticker.C {
-		domains, err := gf.redisClient.SMembers(context.Background(), "gaming:domains").Result()
+		val, err := gf.redisClient.Get(context.Background(), "gaming:domains").Result()
 		if err != nil {
+			continue
+		}
+		var domains []string
+		if err := json.Unmarshal([]byte(val), &domains); err != nil {
 			continue
 		}
 		gf.mu.Lock()
