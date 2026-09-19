@@ -4,6 +4,8 @@ COPY go.mod go.sum* ./
 COPY . .
 # Run tidy with source code present to resolve imports and populate go.sum
 RUN go mod tidy
+# go generate reads plugin.cfg and produces/updates zdirectives.go
+RUN go generate ./...
 RUN CGO_ENABLED=0 go build -mod=mod -o /coredns ./cmd/coremain/
 
 FROM alpine:3.19
