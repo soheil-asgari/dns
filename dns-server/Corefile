@@ -13,11 +13,10 @@
         proxy_ip 37.32.28.44
     }
     
-    # Cache responses — sub-millisecond for repeated queries, prefetch popular domains
-    cache 300 {
-        success 8192 300
-        denial 2048 60
-        prefetch 2 1m
+    # Cache responses — low TTL so new Redis entries are picked up within seconds
+    cache 5 {
+        success 5
+        denial 5
     }
     
     # Forward to upstream DNS for non-gaming domains

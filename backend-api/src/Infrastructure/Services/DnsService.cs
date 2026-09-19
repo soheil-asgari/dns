@@ -106,6 +106,36 @@ public class DnsService : IDnsService
         await _redisDb.HashSetAsync("DNSgaming:domains", "data", jsonPayload);
     }
 
+    public async Task SyncToRedisAsync(CancellationToken cancellationToken = default)
+    {
+        // Fetch all active gaming domains
+        var gamingDomains = await _context.GamingDomains
+            .Where(g => g.IsActive)
+            .Select(g => g.Domain.ToLower().Trim())
+            .ToListAsync(cancellationToken);
+
+        // Fetch all active 'A' record domains from DnsRecords
+        var dnsRecordDomains = await _context.DnsRecords
+            .Where(r => r.IsActive && r.RecordType == "A")
+            .Select(r => r.Domain.ToLower().Trim())
+            .ToListAsync(cancellationToken);
+
+        // Combine, deduplicate using OrdinalIgnoreCase
+        var combined = gamingDomains
+            .Concat(dnsRecordDomains)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var payload = new
+        {
+            data = combined,
+            last_updated = DateTime.UtcNow
+        };
+
+        var jsonPayload = JsonSerializer.Serialize(payload);
+        await _redisDb.HashSetAsync("DNSgaming:domains", "data", jsonPayload);
+    }
+
     public async Task<List<DnsRecord>> GetRecordsAsync()
     {
         return await _context.DnsRecords
@@ -119,6 +149,7 @@ public class DnsService : IDnsService
         record.CreatedAt = DateTime.UtcNow;
         _context.DnsRecords.Add(record);
         await _context.SaveChangesAsync();
+        await SyncToRedisAsync();
         return record;
     }
 
@@ -135,6 +166,7 @@ public class DnsService : IDnsService
         existing.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
+        await SyncToRedisAsync();
         return existing;
     }
 
@@ -145,6 +177,7 @@ public class DnsService : IDnsService
 
         _context.DnsRecords.Remove(existing);
         await _context.SaveChangesAsync();
+        await SyncToRedisAsync();
         return true;
     }
 }

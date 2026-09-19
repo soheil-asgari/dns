@@ -11,10 +11,12 @@ namespace WebApi.Controllers;
 public class DnsController : ControllerBase
 {
     private readonly IDnsService _dnsService;
+    private readonly ILogger<DnsController> _logger;
 
-    public DnsController(IDnsService dnsService)
+    public DnsController(IDnsService dnsService, ILogger<DnsController> logger)
     {
         _dnsService = dnsService;
+        _logger = logger;
     }
 
     [HttpGet("resolve/{domain}")]
@@ -56,25 +58,49 @@ public class DnsController : ControllerBase
     }
 
     [HttpPost("records")]
-    public async Task<IActionResult> CreateRecord([FromBody] DnsRecord record)
+    public async Task<IActionResult> CreateRecord([FromBody] DnsRecord record, CancellationToken cancellationToken)
     {
         var created = await _dnsService.CreateRecordAsync(record);
+        try
+        {
+            await _dnsService.SyncToRedisAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Redis sync failed after creating DNS record {Domain}", record.Domain);
+        }
         return CreatedAtAction(nameof(GetRecords), new { id = created.Id }, created);
     }
 
     [HttpPut("records/{id:guid}")]
-    public async Task<IActionResult> UpdateRecord(Guid id, [FromBody] DnsRecord record)
+    public async Task<IActionResult> UpdateRecord(Guid id, [FromBody] DnsRecord record, CancellationToken cancellationToken)
     {
         var updated = await _dnsService.UpdateRecordAsync(id, record);
         if (updated == null) return NotFound();
+        try
+        {
+            await _dnsService.SyncToRedisAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Redis sync failed after updating DNS record {Id}", id);
+        }
         return Ok(updated);
     }
 
     [HttpDelete("records/{id:guid}")]
-    public async Task<IActionResult> DeleteRecord(Guid id)
+    public async Task<IActionResult> DeleteRecord(Guid id, CancellationToken cancellationToken)
     {
         var deleted = await _dnsService.DeleteRecordAsync(id);
         if (!deleted) return NotFound();
+        try
+        {
+            await _dnsService.SyncToRedisAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Redis sync failed after deleting DNS record {Id}", id);
+        }
         return NoContent();
     }
 }
