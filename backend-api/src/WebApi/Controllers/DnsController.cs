@@ -31,6 +31,16 @@ public class DnsController : ControllerBase
         return Ok(domains);
     }
 
+    [HttpPost("gaming-domains/bulk")]
+    public async Task<IActionResult> CreateBulkGamingDomains([FromBody] BulkGamingDomainsRequest request)
+    {
+        if (request.Domains == null || request.Domains.Count == 0)
+            return BadRequest(new { error = "Domains list is required." });
+
+        await _dnsService.CreateBulkGamingDomainsAsync(request.Domains, request.GameName ?? "Discovered");
+        return Ok(new { message = $"Added {request.Domains.Count} gaming domains and synced to Redis." });
+    }
+
     [HttpPost("sync-redis")]
     public async Task<IActionResult> SyncToRedis()
     {
@@ -67,4 +77,10 @@ public class DnsController : ControllerBase
         if (!deleted) return NotFound();
         return NoContent();
     }
+}
+
+public class BulkGamingDomainsRequest
+{
+    public List<string> Domains { get; set; } = [];
+    public string? GameName { get; set; }
 }

@@ -8,6 +8,7 @@ public interface IDnsService
     Task<DnsResolutionResult> ResolveDomainAsync(string domain);
     Task<List<GamingDomainDto>> GetGamingDomainsAsync();
     Task SyncDnsToRedisAsync();
+    Task CreateBulkGamingDomainsAsync(List<string> domains, string gameName = "Discovered");
 
     // DNS Records CRUD
     Task<List<DnsRecord>> GetRecordsAsync();

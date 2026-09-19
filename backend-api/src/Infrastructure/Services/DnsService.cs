@@ -2,7 +2,7 @@ using Application.Interfaces;
 using Domain.Entities;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Distributed;
+using StackExchange.Redis;
 using System.Text.Json;
 
 namespace Infrastructure.Services;
@@ -10,12 +10,50 @@ namespace Infrastructure.Services;
 public class DnsService : IDnsService
 {
     private readonly AppDbContext _context;
-    private readonly IDistributedCache _cache;
+    private readonly IDatabase _redisDb;
 
-    public DnsService(AppDbContext context, IDistributedCache cache)
+    public DnsService(AppDbContext context, IConnectionMultiplexer redis)
     {
         _context = context;
-        _cache = cache;
+        _redisDb = redis.GetDatabase();
+    }
+
+    public async Task CreateBulkGamingDomainsAsync(List<string> domains, string gameName = "Discovered")
+    {
+        var existingDomains = await _context.GamingDomains
+            .Where(g => g.IsActive)
+            .Select(g => g.Domain.ToLower().Trim())
+            .ToListAsync();
+
+        var existingSet = new HashSet<string>(existingDomains);
+
+        var newDomains = new List<GamingDomain>();
+        foreach (var domain in domains)
+        {
+            var clean = domain.ToLower().Trim();
+            if (!existingSet.Contains(clean))
+            {
+                newDomains.Add(new GamingDomain
+                {
+                    Id = Guid.NewGuid(),
+                    Domain = clean,
+                    GameName = gameName,
+                    Priority = 5,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                });
+                existingSet.Add(clean);
+            }
+        }
+
+        if (newDomains.Count > 0)
+        {
+            _context.GamingDomains.AddRange(newDomains);
+            await _context.SaveChangesAsync();
+        }
+
+        // Auto-sync to Redis after bulk insert
+        await SyncDnsToRedisAsync();
     }
 
     public async Task<DnsResolutionResult> ResolveDomainAsync(string domain)
@@ -61,21 +99,11 @@ public class DnsService : IDnsService
     {
         var gamingDomains = await _context.GamingDomains
             .Where(g => g.IsActive)
-            .Select(g => g.Domain)
+            .Select(g => g.Domain.ToLower().Trim())
             .ToListAsync();
 
-        var dnsRecordDomains = await _context.DnsRecords
-            .Where(r => r.IsActive)
-            .Select(r => r.Domain)
-            .ToListAsync();
-
-        var allDomains = gamingDomains.Concat(dnsRecordDomains).Distinct().ToList();
-
-        var json = JsonSerializer.Serialize(allDomains);
-        await _cache.SetStringAsync("gaming:domains", json, new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1)
-        });
+        var jsonPayload = JsonSerializer.Serialize(gamingDomains);
+        await _redisDb.HashSetAsync("DNSgaming:domains", "data", jsonPayload);
     }
 
     public async Task<List<DnsRecord>> GetRecordsAsync()

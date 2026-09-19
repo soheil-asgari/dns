@@ -74,6 +74,13 @@ builder.Services.AddHttpClient<ZarinPalPaymentService>(client =>
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
+// Certificate Transparency (crt.sh) for subdomain discovery
+builder.Services.AddHttpClient("crtSh", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(15);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("DnsPanel/1.0");
+});
+
 // CORS
 builder.Services.AddCors(options =>
 {

@@ -61,14 +61,22 @@ export interface ProxyRule {
   priority: number;
 }
 
+export interface SubdomainDiscoveryResult {
+  domain: string;
+  count: number;
+  subdomains: string[];
+}
+
 export const dnsApi = {
   resolve: (domain: string) => api.get(`/dns/resolve/${domain}`),
   getGamingDomains: () => api.get<GamingDomain[]>('/dns/gaming-domains'),
   syncRedis: () => api.post('/dns/sync-redis'),
+  bulkCreateGamingDomains: (domains: string[], gameName?: string) => api.post('/dns/gaming-domains/bulk', { domains, gameName }),
   getRecords: () => api.get<DnsRecord[]>('/dns/records'),
   createRecord: (record: Omit<DnsRecord, 'id' | 'createdAt' | 'updatedAt'>) => api.post<DnsRecord>('/dns/records', record),
   updateRecord: (id: string, record: Partial<DnsRecord>) => api.put<DnsRecord>(`/dns/records/${id}`, record),
   deleteRecord: (id: string) => api.delete(`/dns/records/${id}`),
+  discoverSubdomains: (domain: string) => api.get<SubdomainDiscoveryResult>('/DomainDiscovery/subdomains', { params: { domain } }),
 };
 
 export default api;
