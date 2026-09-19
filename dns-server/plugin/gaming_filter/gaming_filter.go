@@ -30,27 +30,74 @@ func New(redisAddr string, refreshInterval time.Duration) *GamingFilter {
 	})
 
 	gf := &GamingFilter{
-		redisClient:      rdb,
+		redisClient:     rdb,
 		refreshInterval:  refreshInterval,
 		gamingDomains:    make(map[string]bool),
 		proxyIP:          "10.0.0.1",
 	}
 
-	go gf.refreshDomains()
+	go gf.startRefresher()
 	return gf
+}
+
+func (gf *GamingFilter) startRefresher() {
+	// 1. بارگذاری فوری و بدون معطلی در لحظه شروع
+	gf.updateDomains()
+
+	// 2. تکرار منظم دوره‌ای
+	ticker := time.NewTicker(gf.refreshInterval)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		gf.updateDomains()
+	}
+}
+
+func (gf *GamingFilter) updateDomains() {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	val, err := gf.redisClient.HGet(ctx, "DNSgaming:domains", "data").Result()
+	if err != nil {
+		log.Errorf("[gaming_filter] Redis HGET error (key: DNSgaming:domains): %v", err)
+		return
+	}
+
+	var domains []string
+	if err := json.Unmarshal([]byte(val), &domains); err != nil {
+		log.Errorf("[gaming_filter] JSON unmarshal error for value '%s': %v", val, err)
+		return
+	}
+
+	gf.mu.Lock()
+	gf.gamingDomains = make(map[string]bool)
+	for _, d := range domains {
+		clean := strings.ToLower(strings.TrimSpace(strings.TrimSuffix(d, ".")))
+		if clean != "" {
+			gf.gamingDomains[clean] = true
+		}
+	}
+	count := len(gf.gamingDomains)
+	gf.mu.Unlock()
+
+	log.Infof("[gaming_filter] Successfully loaded %d gaming domains from Redis", count)
 }
 
 func (gf *GamingFilter) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	state := request.Request{W: w, Req: r}
 
-	// Normalize: strip trailing dot and lowercase
 	rawName := strings.ToLower(strings.TrimSuffix(state.QName(), "."))
 
 	if gf.isGamingDomain(rawName) {
 		log.Infof("[gaming_filter] Intercepted %s -> rewriting to %s", rawName, gf.proxyIP)
 
 		rr := new(dns.A)
-		rr.Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 300}
+		rr.Hdr = dns.RR_Header{
+			Name:   state.QName(),
+			Rrtype: dns.TypeA,
+			Class:  dns.ClassINET,
+			Ttl:    300,
+		}
 		rr.A = net.ParseIP(gf.proxyIP)
 
 		m := new(dns.Msg)
@@ -66,8 +113,6 @@ func (gf *GamingFilter) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 
 func (gf *GamingFilter) Name() string { return "gaming_filter" }
 
-// isGamingDomain checks exact match or subdomain suffix match.
-// domains are expected to be stored without trailing dot.
 func (gf *GamingFilter) isGamingDomain(rawName string) bool {
 	gf.mu.RLock()
 	defer gf.mu.RUnlock()
@@ -75,31 +120,10 @@ func (gf *GamingFilter) isGamingDomain(rawName string) bool {
 	if gf.gamingDomains[rawName] {
 		return true
 	}
-	// Check subdomain: rawName ends with ".domain"
 	for d := range gf.gamingDomains {
 		if strings.HasSuffix(rawName, "."+d) {
 			return true
 		}
 	}
 	return false
-}
-
-func (gf *GamingFilter) refreshDomains() {
-	ticker := time.NewTicker(gf.refreshInterval)
-	for range ticker.C {
-		val, err := gf.redisClient.HGet(context.Background(), "DNSgaming:domains", "data").Result()
-		if err != nil {
-			continue
-		}
-		var domains []string
-		if err := json.Unmarshal([]byte(val), &domains); err != nil {
-			continue
-		}
-		gf.mu.Lock()
-		gf.gamingDomains = make(map[string]bool)
-		for _, d := range domains {
-			gf.gamingDomains[d] = true
-		}
-		gf.mu.Unlock()
-	}
 }
