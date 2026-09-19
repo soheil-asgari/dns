@@ -1,4 +1,5 @@
 import axios from 'axios';
+import crypto from 'crypto';
 
 const api = axios.create({
   baseURL: process.env.API_URL || 'http://backend-api:8080',
@@ -114,8 +115,10 @@ export async function detectIp() {
   return data as IpDetectionResponse;
 }
 
+/** Generate HMAC-SHA256 signature for quick-register URL */
 export function buildQuickRegisterUrl(telegramId: number): string {
-  const baseUrl = process.env.QUICK_REGISTER_URL || 'http://37.32.28.44:8080';
-  const sign = 'auto'; // Simple sign; can be enhanced with HMAC later
-  return `${baseUrl}/api/subscription/quick-register?telegramId=${telegramId}&sign=${sign}`;
+  const botToken = process.env.BOT_TOKEN || '';
+  const sign = crypto.createHmac('sha256', botToken).update(telegramId.toString()).digest('hex');
+  const baseUrl = process.env.QUICK_REGISTER_URL || 'https://dns.rhynoai.ir';
+  return `${baseUrl}/ip?id=${telegramId}&sign=${sign}`;
 }

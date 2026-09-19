@@ -63,12 +63,40 @@ public class SubscriptionController : ControllerBase
         if (telegramId == 0)
             return Content("<html><body><h3>❌ TelegramId is required</h3></body></html>", "text/html");
 
-        // Extract real client IP
-        var ip = HttpContext.Connection.RemoteIpAddress;
-        if (ip == null)
-            return Content("<html><body><h3>❌ Could not determine your IP address</h3></body></html>", "text/html");
+        // Verify HMAC-SHA256 signature
+        var botToken = await GetBotTokenFromDbAsync();
+        if (string.IsNullOrEmpty(botToken))
+            return Content("<html><body><h3>❌ Bot token not configured</h3></body></html>", "text/html");
 
-        var ipString = ip.MapToIPv4().ToString();
+        var expectedSign = HmacSha256(botToken, telegramId.ToString());
+        if (!string.Equals(sign, expectedSign, StringComparison.OrdinalIgnoreCase))
+            return Content("<html><body><h3>❌ Invalid signature</h3></body></html>", "text/html");
+
+        // Extract real client IP (trust X-Forwarded-For first)
+        var forwardedFor = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        string? ipString = null;
+        if (!string.IsNullOrWhiteSpace(forwardedFor))
+        {
+            ipString = forwardedFor.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .FirstOrDefault();
+        }
+
+        if (string.IsNullOrWhiteSpace(ipString))
+        {
+            var realIp = HttpContext.Request.Headers["X-Real-IP"].FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(realIp))
+                ipString = realIp;
+        }
+
+        if (string.IsNullOrWhiteSpace(ipString))
+        {
+            var remoteIp = HttpContext.Connection.RemoteIpAddress;
+            if (remoteIp != null)
+                ipString = remoteIp.MapToIPv4().ToString();
+        }
+
+        if (string.IsNullOrWhiteSpace(ipString))
+            return Content("<html><body><h3>❌ Could not determine your IP address</h3></body></html>", "text/html");
 
         var success = await _subscriptionService.RegisterIpAsync(telegramId, ipString);
 
@@ -80,6 +108,21 @@ public class SubscriptionController : ControllerBase
         return Content(
             $"<html><body dir='rtl'><h3>✅ آی‌پی {ipString} با موفقیت در سیستم ثبت شد!</h3><p>از حالا می‌توانید با ست کردن DNS زیر، از اینترنت بدون تحریم استفاده کنید:</p><p><b>Primary DNS: 37.32.28.44</b></p><p>می‌توانید به تلگرام برگردید.</p></body></html>",
             "text/html");
+    }
+
+    private async Task<string?> GetBotTokenFromDbAsync()
+    {
+        using var scope = HttpContext.RequestServices.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<Infrastructure.Data.AppDbContext>();
+        var setting = await db.SystemSettings.FindAsync("bot_token");
+        return setting?.Value;
+    }
+
+    private static string HmacSha256(string key, string data)
+    {
+        using var hmac = new System.Security.Cryptography.HMACSHA256(System.Text.Encoding.UTF8.GetBytes(key));
+        var hash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(data));
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
     /// <summary>

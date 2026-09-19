@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="description" content="ثبت و اتصال سریع به DNS Rhyno" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <title>Rhyno DNS — ثبت سریع</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg-primary: #0b0f1a;
+      --bg-card: #141a2b;
+      --bg-card-hover: #1a2140;
+      --border-glass: rgba(99, 102, 241, 0.15);
+      --glow-primary: rgba(99, 102, 241, 0.3);
+      --glow-success: rgba(34, 197, 94, 0.4);
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --success: #22c55e;
+      --success-bg: rgba(34, 197, 94, 0.1);
+      --error: #ef4444;
+      --error-bg: rgba(239, 68, 68, 0.1);
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+    body {
+      font-family: 'Vazirmatn', system-ui, -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      position: relative;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(ellipse at 20% 50%, rgba(99,102,241,0.06) 0%, transparent 50%),
+                  radial-gradient(ellipse at 80% 20%, rgba(34,197,94,0.04) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .card {
+      position: relative;
+      z-index: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--border-glass);
+      border-radius: var(--radius);
+      padding: 40px 36px;
+      max-width: 480px;
+      width: 100%;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 0 40px var(--glow-primary), 0 8px 32px rgba(0,0,0,0.4);
+      transition: box-shadow 0.4s ease;
+    }
+    .card.success { box-shadow: 0 0 50px var(--glow-success), 0 8px 32px rgba(0,0,0,0.4); }
+    .brand { text-align: center; margin-bottom: 28px; }
+    .brand-logo {
+      width: 56px; height: 56px;
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 12px;
+      font-size: 28px;
+      box-shadow: 0 0 20px var(--glow-primary);
+    }
+    .brand h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+    .brand p { color: var(--text-secondary); font-size: 13px; margin-top: 4px; }
+    .ip-badge {
+      display: flex; align-items: center; gap: 10px;
+      background: rgba(99,102,241,0.08);
+      border: 1px solid rgba(99,102,241,0.2);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      margin-bottom: 24px;
+      direction: ltr;
+      text-align: left;
+    }
+    .ip-badge .ip-label {
+      font-size: 12px; color: var(--text-muted);
+      display: block; margin-bottom: 2px;
+      direction: rtl; text-align: right;
+    }
+    .ip-badge .ip-address {
+      font-size: 18px; font-weight: 700;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.5px;
+      color: var(--text-primary);
+    }
+    .ip-badge .status-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-dot.idle { background: var(--text-muted); }
+    .status-dot.loading { background: var(--accent); animation: pulse 1s infinite; }
+    .status-dot.registered { background: var(--success); box-shadow: 0 0 8px var(--success); }
+    .status-dot.error { background: var(--error); }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .action-area { text-align: center; margin-bottom: 24px; }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: linear-gradient(135deg, var(--accent), #4f46e5);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 16px 40px;
+      font-size: 17px;
+      font-weight: 600;
+      font-family: 'Vazirmatn', system-ui, sans-serif;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 0 20px var(--glow-primary);
+      width: 100%;
+      justify-content: center;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 0 30px var(--glow-primary); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .btn-primary .spinner {
+      width: 20px; height: 20px;
+      border: 2.5px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .success-animation {
+      text-align: center;
+      margin: 12px 0 20px;
+      display: none;
+    }
+    .success-animation.show { display: block; }
+    .success-checkmark {
+      width: 64px; height: 64px;
+      background: var(--success-bg);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 12px;
+      position: relative;
+    }
+    .success-checkmark svg {
+      width: 36px; height: 36px;
+    }
+    .success-checkmark .checkmark-path {
+      stroke-dasharray: 50;
+      stroke-dashoffset: 50;
+      animation: drawCheck 0.6s ease forwards;
+    }
+    @keyframes drawCheck { to { stroke-dashoffset: 0; } }
+    .success-text { font-size: 16px; font-weight: 600; color: var(--success); }
+    .countdown-box {
+      background: rgba(99,102,241,0.06);
+      border: 1px solid rgba(99,102,241,0.12);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      margin-bottom: 20px;
+      display: none;
+      text-align: center;
+    }
+    .countdown-box.show { display: block; }
+    .countdown-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+    .countdown-value { font-size: 20px; font-weight: 700; color: var(--accent); font-family: 'Courier New', monospace; direction: ltr; }
+    .dns-box {
+      background: rgba(0,0,0,0.2);
+      border-radius: var(--radius-sm);
+      padding: 18px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .dns-box.show { display: block; }
+    .dns-box-title { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; text-align: center; }
+    .dns-row {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 10px;
+      direction: ltr;
+    }
+    .dns-row:last-child { margin-bottom: 0; }
+    .dns-label { font-size: 12px; color: var(--text-muted); min-width: 30px; flex-shrink: 0; }
+    .dns-value {
+      flex: 1;
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-family: 'Courier New', monospace;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-primary);
+      border: 1px solid rgba(99,102,241,0.15);
+      direction: ltr;
+      text-align: left;
+      user-select: all;
+    }
+    .btn-copy {
+      background: rgba(99,102,241,0.15);
+      border: 1px solid rgba(99,102,241,0.2);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 13px;
+      font-family: 'Vazirmatn', system-ui, sans-serif;
+      transition: background 0.15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .btn-copy:hover { background: rgba(99,102,241,0.25); }
+    .btn-copy.copied { background: rgba(34,197,94,0.2); color: var(--success); border-color: var(--success); }
+    .btn-back {
+      display: block;
+      text-align: center;
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      background: rgba(99,102,241,0.06);
+      border: 1px solid rgba(99,102,241,0.12);
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 14px;
+      transition: background 0.15s, color 0.15s;
+      margin-top: 8px;
+      display: none;
+    }
+    .btn-back.show { display: block; }
+    .btn-back:hover { background: rgba(99,102,241,0.12); color: var(--text-primary); }
+    .error-box {
+      background: var(--error-bg);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      color: var(--error);
+      font-size: 14px;
+      text-align: center;
+      display: none;
+      margin-bottom: 16px;
+    }
+    .error-box.show { display: block; }
+    .status-text {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 8px;
+    }
+    @media (max-width: 500px) {
+      .card { padding: 28px 20px; }
+      .brand h1 { font-size: 19px; }
+      .ip-badge .ip-address { font-size: 15px; }
+      .btn-primary { padding: 14px 24px; font-size: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card" id="app">
+    <!-- Brand -->
+    <div class="brand">
+      <div class="brand-logo">🦏</div>
+      <h1>Rhyno DNS Network</h1>
+      <p>اتصال امن و سریع به اینترنت</p>
+    </div>
+
+    <!-- Error -->
+    <div class="error-box" id="errorBox"></div>
+
+    <!-- IP Badge -->
+    <div class="ip-badge">
+      <span class="status-dot idle" id="statusDot"></span>
+      <div>
+        <span class="ip-label">🌐 آی‌پی اینترنت شما</span>
+        <span class="ip-address" id="ipDisplay">—</span>
+      </div>
+    </div>
+
+    <!-- Action Button -->
+    <div class="action-area">
+      <button class="btn-primary" id="actionBtn" onclick="handleAction()">
+        <span id="btnText">⚡️ ثبت و اتصال سریع</span>
+      </button>
+    </div>
+    <div class="status-text" id="statusText">برای شروع دکمه بالا را بزنید</div>
+
+    <!-- Success Animation -->
+    <div class="success-animation" id="successAnim">
+      <div class="success-checkmark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path class="checkmark-path" d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
+      <div class="success-text">✅ آی‌پی شما با موفقیت ثبت شد!</div>
+    </div>
+
+    <!-- Countdown -->
+    <div class="countdown-box" id="countdownBox">
+      <div class="countdown-label">⏳ زمان باقی‌مانده از اشتراک</div>
+      <div class="countdown-value" id="countdownValue">—</div>
+    </div>
+
+    <!-- DNS Config -->
+    <div class="dns-box" id="dnsBox">
+      <div class="dns-box-title">⚙️ تنظیمات DNS سرور</div>
+      <div class="dns-row">
+        <span class="dns-label">۱</span>
+        <span class="dns-value" id="dnsPrimary">37.32.28.44</span>
+        <button class="btn-copy" onclick="copyDns('dnsPrimary', this)">📋 کپی</button>
+      </div>
+      <div class="dns-row">
+        <span class="dns-label">۲</span>
+        <span class="dns-value" id="dnsSecondary">1.1.1.1</span>
+        <button class="btn-copy" onclick="copyDns('dnsSecondary', this)">📋 کپی</button>
+      </div>
+    </div>
+
+    <!-- Back to Bot -->
+    <a class="btn-back" id="backBtn" href="https://t.me/rhyno_dns_bot" target="_blank">↩️ بازگشت به ربات تلگرام</a>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const telegramId = params.get('id');
+    const sign = params.get('sign');
+    const API_BASE = '/api';
+
+    const ipDisplay = document.getElementById('ipDisplay');
+    const statusDot = document.getElementById('statusDot');
+    const actionBtn = document.getElementById('actionBtn');
+    const btnText = document.getElementById('btnText');
+    const statusText = document.getElementById('statusText');
+    const errorBox = document.getElementById('errorBox');
+    const successAnim = document.getElementById('successAnim');
+    const countdownBox = document.getElementById('countdownBox');
+    const countdownValue = document.getElementById('countdownValue');
+    const dnsBox = document.getElementById('dnsBox');
+    const backBtn = document.getElementById('backBtn');
+
+    let detectedIp = '';
+    let countdownInterval = null;
+
+    function showError(msg) {
+      errorBox.textContent = msg;
+      errorBox.classList.add('show');
+    }
+
+    function hideError() {
+      errorBox.classList.remove('show');
+    }
+
+    function setStatusDot(state) {
+      statusDot.className = 'status-dot ' + state;
+    }
+
+    function setLoading(isLoading) {
+      if (isLoading) {
+        actionBtn.disabled = true;
+        btnText.innerHTML = '<span class="spinner"></span> در حال ثبت...';
+        setStatusDot('loading');
+        statusText.textContent = 'در حال اتصال به سرور...';
+      } else {
+        actionBtn.disabled = false;
+      }
+    }
+
+    // Detect IP on load
+    async function detectIp() {
+      try {
+        setStatusDot('loading');
+        statusText.textContent = 'در حال شناسایی آی‌پی...';
+        const res = await fetch(API_BASE + '/ip/detect');
+        const data = await res.json();
+        detectedIp = data.ip;
+        ipDisplay.textContent = detectedIp;
+        setStatusDot('idle');
+        statusText.textContent = 'آی‌پی شما شناسایی شد. آماده ثبت.';
+        actionBtn.disabled = false;
+      } catch (err) {
+        ipDisplay.textContent = 'خطا';
+        setStatusDot('error');
+        statusText.textContent = 'شناسایی آی‌پی ممکن نیست';
+        showError('خطا در شناسایی آی‌پی اینترنت. لطفاً صفحه را مجدداً بارگذاری کنید.');
+        actionBtn.disabled = true;
+      }
+    }
+
+    // Auto-register if id & sign present
+    async function autoRegister() {
+      if (telegramId && sign) {
+        setLoading(true);
+        hideError();
+        try {
+          const res = await fetch(`${API_BASE}/subscription/quick-register?telegramId=${telegramId}&sign=${sign}`);
+          const html = await res.text();
+          // Check for error in response HTML
+          if (html.includes('❌')) {
+            setStatusDot('error');
+            statusText.textContent = 'ثبت ناموفق';
+            showError('خطا در ثبت آی‌پی. لطفاً دوباره تلاش کنید یا به ربات مراجعه کنید.');
+            setLoading(false);
+            return;
+          }
+          // Success
+          setStatusDot('registered');
+          statusText.textContent = '✅ آی‌پی با موفقیت ثبت شد';
+          actionBtn.style.display = 'none';
+          successAnim.classList.add('show');
+          dnsBox.classList.add('show');
+          backBtn.classList.add('show');
+          countdownBox.classList.add('show');
+          document.querySelector('.card').classList.add('success');
+          // Start countdown from 24h
+          startCountdown(24 * 3600);
+        } catch (err) {
+          setStatusDot('error');
+          statusText.textContent = 'خطای شبکه';
+          showError('خطا در ارتباط با سرور. لطفاً دوباره تلاش کنید.');
+          setLoading(false);
+        }
+      } else {
+        // No params - just show UI ready for manual click
+        actionBtn.disabled = false;
+        statusText.textContent = 'برای ثبت آی‌پی دکمه بالا را بزنید';
+      }
+    }
+
+    async function handleAction() {
+      if (!detectedIp) {
+        showError('لطفاً صبر کنید تا آی‌پی شناسایی شود.');
+        return;
+      }
+      if (!telegramId || !sign) {
+        showError('لینک معتبر نیست. لطفاً از ربات تلگرام استفاده کنید.');
+        return;
+      }
+      setLoading(true);
+      hideError();
+      try {
+        const res = await fetch(`${API_BASE}/subscription/quick-register?telegramId=${telegramId}&sign=${sign}`);
+        const html = await res.text();
+        if (html.includes('❌')) {
+          setStatusDot('error');
+          statusText.textContent = 'ثبت ناموفق';
+          showError('خطا در ثبت آی‌پی. لطفاً به ربات مراجعه کنید.');
+          setLoading(false);
+          return;
+        }
+        setStatusDot('registered');
+        statusText.textContent = '✅ ثبت موفق';
+        actionBtn.style.display = 'none';
+        successAnim.classList.add('show');
+        dnsBox.classList.add('show');
+        backBtn.classList.add('show');
+        countdownBox.classList.add('show');
+        document.querySelector('.card').classList.add('success');
+        startCountdown(24 * 3600);
+      } catch (err) {
+        setStatusDot('error');
+        statusText.textContent = 'خطای شبکه';
+        showError('خطا در ارتباط با سرور.');
+        setLoading(false);
+      }
+    }
+
+    function startCountdown(seconds) {
+      function tick() {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        countdownValue.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        if (seconds > 0) seconds--;
+      }
+      tick();
+      countdownInterval = setInterval(tick, 1000);
+    }
+
+    async function copyDns(elementId, btn) {
+      const text = document.getElementById(elementId).textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        btn.textContent = '✅ کپی شد';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = '📋 کپی';
+          btn.classList.remove('copied');
+        }, 2000);
+      } catch {
+        // Fallback
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        btn.textContent = '✅ کپی شد';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = '📋 کپی';
+          btn.classList.remove('copied');
+        }, 2000);
+      }
+    }
+
+    // Init
+    detectIp().then(() => autoRegister());
+  </script>
+</body>
+</html>

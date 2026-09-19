@@ -123,7 +123,7 @@ async function handlePersistentKeyboard(ctx: Context, text: string, telegramId: 
     }
 
     case '⚡️ ثبت آی‌پی من': {
-      const quickRegisterUrl = `http://37.32.28.44:8080/api/subscription/quick-register?telegramId=${telegramId}`;
+      const quickRegisterUrl = buildQuickRegisterUrl(telegramId);
       await ctx.reply(
         `⚡️ *ثبت خودکار آی‌پی*\n\n` +
         `روی لینک زیر کلیک کنید تا آی‌پی شما به صورت آنی شناسایی و فعال شود:\n\n` +
