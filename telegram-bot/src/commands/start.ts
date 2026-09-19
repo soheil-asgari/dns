@@ -52,10 +52,6 @@ export async function startHandler(ctx: Context) {
       `برای فعال‌سازی و اتصال به سرور، لطفاً آی‌پی عمومی اینترنت خود را به صورت پیام متنی ارسال کنید (مثال: \`1.2.3.4\`).`,
       {
         parse_mode: 'Markdown',
-        ...Markup.inlineKeyboard([
-          [Markup.button.url('🌐 مشاهده آی‌پی من', 'https://icanhazip.com')],
-          [Markup.button.callback('📝 راهنمای تنظیم DNS', 'dns_guide')],
-        ]),
         ...mainKeyboard,
       }
     );
@@ -88,13 +84,6 @@ export async function startHandler(ctx: Context) {
 
   await ctx.reply(message, {
     parse_mode: 'Markdown',
-    ...Markup.inlineKeyboard([
-      [Markup.button.url('🌐 مشاهده آی‌پی من', 'https://icanhazip.com')],
-      [Markup.button.callback('✏️ ثبت دستی آی‌پی', 'manual_ip')],
-      [Markup.button.callback('📊 وضعیت اشتراک و زمان باقی‌مانده', 'subscription_status')],
-      [Markup.button.callback('📝 راهنمای تنظیم DNS', 'dns_guide')],
-      ...(status.hasActiveSubscription ? [] : [[Markup.button.callback('💳 خرید اشتراک', 'buy_subscription')]] as any),
-    ]),
     ...mainKeyboard,
   });
 }
@@ -134,23 +123,19 @@ async function handlePersistentKeyboard(ctx: Context, text: string, telegramId: 
     }
 
     case '⚡️ ثبت آی‌پی من': {
+      const quickRegisterUrl = `http://37.32.28.44:8080/api/subscription/quick-register?telegramId=${telegramId}`;
       await ctx.reply(
-        '⚡️ *ثبت خودکار آی‌پی*\n\n' +
-        'برای ثبت خودکار آی‌پی اینترنت خود، روی دکمه زیر کلیک کنید:\n\n' +
-        'همچنین می‌توانید آی‌پی خود را به صورت دستی ارسال کنید.',
+        `⚡️ *ثبت خودکار آی‌پی*\n\n` +
+        `روی لینک زیر کلیک کنید تا آی‌پی شما به صورت آنی شناسایی و فعال شود:\n\n` +
+        `👉 [ثبت و فعال‌سازی آی‌پی من](${quickRegisterUrl})\n\n` +
+        `_همچنین می‌توانید آی‌پی اینترنت خود را به صورت دستی در چت بفرستید._`,
         {
           parse_mode: 'Markdown',
           reply_markup: {
             inline_keyboard: [
-              [
-                {
-                  text: '🚀 ثبت و اتصال خودکار آی‌پی من',
-                  url: `http://37.32.28.44:8080/api/subscription/quick-register?telegramId=${ctx.from.id}`,
-                },
-              ],
-            ],
-          },
-          ...mainKeyboard,
+              [{ text: "🚀 ثبت و اتصال خودکار آی‌پی", url: quickRegisterUrl }]
+            ]
+          }
         }
       );
       return true;
