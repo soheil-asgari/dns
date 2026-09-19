@@ -107,13 +107,19 @@ async function init() {
     const { createClient } = await import('redis');
     const redisUrl = process.env.REDIS_URL || 'redis://redis:6379';
     const subscriber = createClient({ url: redisUrl });
-    await subscriber.connect();
-    await subscriber.subscribe('config:bot_token_changed', async (newToken) => {
+    await (subscriber as any).connect?.();
+    await subscriber.subscribe('config:bot_token_changed', async (err, reply) => {
+      if (err) {
+        logger.warn({ err: err.message }, 'Redis pub/sub subscription error');
+        return;
+      }
+      if (!reply) return;
       logger.info('Bot token changed via Redis pub/sub, restarting...');
-      await startBot(newToken);
+      await startBot(reply);
     });
-  } catch (err) {
-    logger.warn({ err }, 'Redis pub/sub subscription failed (non-critical)');
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    logger.warn({ err: errMsg }, 'Redis pub/sub subscription failed (non-critical)');
   }
 }
 
