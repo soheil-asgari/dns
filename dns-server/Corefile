@@ -13,15 +13,17 @@
         proxy_ip 37.32.28.44
     }
     
-    # Cache responses
-    cache {
-        success 512 30 60
-        denial 128 5 30
+    # Cache responses — sub-millisecond for repeated queries, prefetch popular domains
+    cache 300 {
+        success 8192 300
+        denial 2048 60
+        prefetch 2 1m
     }
     
     # Forward to upstream DNS for non-gaming domains
-    forward . 8.8.8.8 8.8.4.4 {
-        max_concurrent 1000
+    forward . 8.8.8.8 1.1.1.1 {
+        max_concurrent 2000
+        prefer_udp
     }
 }
 
