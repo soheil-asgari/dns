@@ -2,6 +2,7 @@ using Infrastructure.Data;
 using Infrastructure.Services;
 using Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,15 +15,23 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Redis cache
+// Redis cache (IDistributedCache)
 builder.Services.AddStackExchangeRedisCache(options =>
 {
     options.Configuration = builder.Configuration.GetConnectionString("Redis");
     options.InstanceName = "DNS";
 });
 
+// Redis ConnectionMultiplexer (for direct Redis commands like SADD)
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    var config = builder.Configuration.GetConnectionString("Redis") ?? "redis:6379";
+    return ConnectionMultiplexer.Connect(config);
+});
+
 // Application services
 builder.Services.AddScoped<IDnsService, DnsService>();
+builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 
 // CORS
 builder.Services.AddCors(options =>
@@ -50,11 +59,11 @@ app.UseCors("AllowAll");
 app.MapControllers();
 app.MapHealthChecks("/health");
 
-// Seed database
+// Apply migrations and seed database on startup
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await context.Database.EnsureCreatedAsync();
+    await context.Database.MigrateAsync();
     await AppDbContextSeed.SeedAsync(context);
 }
 

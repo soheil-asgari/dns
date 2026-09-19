@@ -12,4 +12,37 @@ public class AppDbContext : DbContext
     public DbSet<DnsRecord> DnsRecords { get; set; } = null!;
     public DbSet<GamingDomain> GamingDomains { get; set; } = null!;
     public DbSet<ProxyRule> ProxyRules { get; set; } = null!;
+    public DbSet<User> Users { get; set; } = null!;
+    public DbSet<Subscription> Subscriptions { get; set; } = null!;
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        // User configuration
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.TelegramId).IsUnique();
+            entity.Property(e => e.TelegramId).IsRequired();
+            entity.Property(e => e.Username).HasMaxLength(128);
+            entity.Property(e => e.FirstName).HasMaxLength(256);
+        });
+
+        // Subscription configuration
+        modelBuilder.Entity<Subscription>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Type).IsRequired();
+            entity.Property(e => e.RegisteredIp).HasMaxLength(45);
+
+            entity.HasOne(e => e.User)
+                .WithMany(u => u.Subscriptions)
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => new { e.UserId, e.IsActive });
+            entity.HasIndex(e => e.RegisteredIp);
+        });
+    }
 }

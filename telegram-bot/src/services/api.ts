@@ -27,3 +27,77 @@ export async function getStats() {
     activeDomains: domains.filter((d: any) => d.isActive).length,
   };
 }
+
+// === Subscription / IP Registration API ===
+
+export interface UserDto {
+  id: string;
+  telegramId: number;
+  username: string | null;
+  firstName: string | null;
+  isNewUser: boolean;
+  activeSubscription: SubscriptionDto | null;
+}
+
+export interface SubscriptionDto {
+  id: string;
+  type: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  registeredIp: string | null;
+  remainingTime: string;
+  isExpired: boolean;
+}
+
+export interface SubscriptionStatusDto {
+  hasActiveSubscription: boolean;
+  currentSubscription: SubscriptionDto | null;
+  history: SubscriptionDto[];
+}
+
+export interface RegisterIpResponse {
+  success: boolean;
+  message: string;
+  registeredIp?: string;
+}
+
+export interface IpDetectionResponse {
+  ip: string;
+  country?: string;
+  isRegistered: boolean;
+}
+
+export async function getOrCreateUser(telegramId: number, username?: string, firstName?: string, provisionTrial = true) {
+  const { data } = await api.post('/api/subscription/get-or-create', {
+    telegramId,
+    username,
+    firstName,
+    provisionTrial,
+  });
+  return data as {
+    user: UserDto;
+    trialProvisioned: boolean;
+    trial: SubscriptionDto | null;
+  };
+}
+
+export async function getSubscriptionStatus(telegramId: number) {
+  const { data } = await api.get('/api/subscription/status', {
+    params: { telegramId },
+  });
+  return data as SubscriptionStatusDto;
+}
+
+export async function registerIp(telegramId: number, ipAddress: string) {
+  const { data } = await api.post('/api/subscription/register-ip', {
+    telegramId,
+    ipAddress,
+  });
+  return data as RegisterIpResponse;
+}
+
+export async function detectIp() {
+  const { data } = await api.get('/api/ip/detect');
+  return data as IpDetectionResponse;
+}

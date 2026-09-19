@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { Telegraf, session } from 'telegraf';
 import RedisSession from 'telegraf-session-redis';
 import pino from 'pino';
-import { startHandler, helpHandler } from './commands/start.js';
+import { startHandler, helpHandler, setupCallbacks } from './commands/start.js';
 import { dnsHandler } from './commands/dns.js';
 import { listHandler } from './commands/list.js';
 import { adminHandler } from './commands/admin.js';
@@ -40,6 +40,9 @@ if (!BOT_TOKEN || BOT_TOKEN === 'your_telegram_bot_token_here') {
   bot.command('dns', dnsHandler);
   bot.command('list', listHandler);
   bot.command('admin', adminHandler);
+
+  // Setup callback query handlers (subscription flow)
+  setupCallbacks(bot);
 
   // Start bot
   bot.launch(() => {
