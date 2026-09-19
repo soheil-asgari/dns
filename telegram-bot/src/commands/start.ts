@@ -291,10 +291,14 @@ export async function setupCallbacks(bot: any) {
     );
   });
 
+  // Helper to extract ID from callback_data safely
+  const getCallbackData = (ctx: any): string => ctx.callbackQuery?.data || '';
+
   // Payment: select plan (multi-plan flow)
   bot.action(/^select_plan_/, async (ctx: any) => {
     await ctx.answerCbQuery();
-    const planId = ctx.match[0].replace('select_plan_', '');
+    const data = getCallbackData(ctx);
+    const planId = data.replace('select_plan_', '');
     const telegramId = ctx.from?.id;
     if (!telegramId || !planId) return;
 
@@ -320,7 +324,8 @@ export async function setupCallbacks(bot: any) {
   // Payment: single-plan with discount
   bot.action(/^single_discount_/, async (ctx: any) => {
     await ctx.answerCbQuery();
-    const planId = ctx.match[0].replace('single_discount_', '');
+    const data = getCallbackData(ctx);
+    const planId = data.replace('single_discount_', '');
     const telegramId = ctx.from?.id;
     if (!telegramId || !planId) return;
 
@@ -338,7 +343,8 @@ export async function setupCallbacks(bot: any) {
   // Payment: single-plan no discount (immediate checkout)
   bot.action(/^single_nodiscount_/, async (ctx: any) => {
     await ctx.answerCbQuery();
-    const planId = ctx.match[0].replace('single_nodiscount_', '');
+    const data = getCallbackData(ctx);
+    const planId = data.replace('single_nodiscount_', '');
     const telegramId = ctx.from?.id;
     if (!telegramId || !planId) return;
 
