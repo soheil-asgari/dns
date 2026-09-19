@@ -14,6 +14,8 @@ public class AppDbContext : DbContext
     public DbSet<ProxyRule> ProxyRules { get; set; } = null!;
     public DbSet<User> Users { get; set; } = null!;
     public DbSet<Subscription> Subscriptions { get; set; } = null!;
+    public DbSet<AdminUser> AdminUsers { get; set; } = null!;
+    public DbSet<SystemSetting> SystemSettings { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -43,6 +45,25 @@ public class AppDbContext : DbContext
 
             entity.HasIndex(e => new { e.UserId, e.IsActive });
             entity.HasIndex(e => e.RegisteredIp);
+        });
+
+        // AdminUser configuration
+        modelBuilder.Entity<AdminUser>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Username).IsUnique();
+            entity.Property(e => e.Username).HasMaxLength(128).IsRequired();
+            entity.Property(e => e.PasswordHash).IsRequired();
+            entity.Property(e => e.PasswordSalt).IsRequired();
+            entity.Property(e => e.Role).HasMaxLength(64).HasDefaultValue("Admin");
+        });
+
+        // SystemSetting configuration
+        modelBuilder.Entity<SystemSetting>(entity =>
+        {
+            entity.HasKey(e => e.Key);
+            entity.Property(e => e.Key).HasMaxLength(256).IsRequired();
+            entity.Property(e => e.Value).IsRequired();
         });
     }
 }

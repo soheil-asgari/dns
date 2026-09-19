@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, Link } from 'react-router-dom';
 import {
   LayoutDashboard,
   Globe,
@@ -17,6 +17,7 @@ const navItems = [
   { to: '/panel/gaming-domains', icon: Gamepad2, label: 'Gaming Domains' },
   { to: '/panel/proxy-rules', icon: Shield, label: 'Proxy Rules' },
   { to: '/panel/analytics', icon: BarChart3, label: 'Analytics' },
+  { to: '/panel/settings', icon: Settings, label: 'Settings', end: false },
 ];
 
 export default function Layout() {
@@ -89,14 +90,16 @@ export default function Layout() {
       <main className="flex-1 overflow-auto">
         <header className="bg-slate-800 border-b border-slate-700 px-8 py-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Dashboard</h2>
+            <h2 className="text-lg font-semibold">DNS Panel</h2>
             <div className="flex items-center gap-4">
               <button className="btn-primary" onClick={handleSync} disabled={isSyncing}>
                 {isSyncing ? 'Syncing...' : 'Sync to Redis'}
               </button>
-              <button className="p-2 hover:bg-slate-700 rounded-lg transition-colors">
-                <Settings className="w-5 h-5" />
-              </button>
+              <Link to="/panel/settings">
+                <button className="p-2 hover:bg-slate-700 rounded-lg transition-colors">
+                  <Settings className="w-5 h-5" />
+                </button>
+              </Link>
             </div>
           </div>
         </header>

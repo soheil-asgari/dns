@@ -28,6 +28,18 @@ export async function getStats() {
   };
 }
 
+/** Fetch bot token from the backend settings API (no auth needed for bot internal calls) */
+export async function fetchBotToken(): Promise<{ token: string; isConfigured: boolean } | null> {
+  try {
+    const { data } = await api.get('/api/settings/bot-token', {
+      headers: { 'X-Internal-Service': 'telegram-bot' }
+    });
+    return data;
+  } catch {
+    return null;
+  }
+}
+
 // === Subscription / IP Registration API ===
 
 export interface UserDto {

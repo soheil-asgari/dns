@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260919072100_AddUsersAndSubscriptions")]
-    partial class AddUsersAndSubscriptions
+    [Migration("20260919073700_AddAdminUsersAndSystemSettings")]
+    partial class AddAdminUsersAndSystemSettings
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,45 @@ namespace Infrastructure.Data.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("Domain.Entities.AdminUser", b =>
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<DateTime>("CreatedAt")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("datetime2")
+                    .HasDefaultValueSql("GETUTCDATE()");
+
+                b.Property<string>("PasswordHash")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
+
+                b.Property<string>("PasswordSalt")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
+
+                b.Property<string>("Role")
+                    .IsRequired()
+                    .ValueGeneratedOnAdd()
+                    .HasMaxLength(64)
+                    .HasColumnType("nvarchar(64)")
+                    .HasDefaultValue("Admin");
+
+                b.Property<string>("Username")
+                    .IsRequired()
+                    .HasMaxLength(128)
+                    .HasColumnType("nvarchar(128)");
+
+                b.HasKey("Id");
+
+                b.HasIndex("Username")
+                    .IsUnique();
+
+                b.ToTable("AdminUsers");
+            });
 
             modelBuilder.Entity("Domain.Entities.DnsRecord", b =>
             {
@@ -163,6 +202,26 @@ namespace Infrastructure.Data.Migrations
                 b.HasIndex("UserId", "IsActive");
 
                 b.ToTable("Subscriptions");
+            });
+
+            modelBuilder.Entity("Domain.Entities.SystemSetting", b =>
+            {
+                b.Property<string>("Key")
+                    .HasMaxLength(256)
+                    .HasColumnType("nvarchar(256)");
+
+                b.Property<DateTime>("UpdatedAt")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("datetime2")
+                    .HasDefaultValueSql("GETUTCDATE()");
+
+                b.Property<string>("Value")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
+
+                b.HasKey("Key");
+
+                b.ToTable("SystemSettings");
             });
 
             modelBuilder.Entity("Domain.Entities.User", b =>
