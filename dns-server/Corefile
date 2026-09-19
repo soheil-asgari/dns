@@ -9,7 +9,7 @@
     # Gaming-specific plugin (custom) — must come before forward per plugin.cfg
     gaming_filter {
         redis_addr redis:6379
-        refresh_interval 60s
+        refresh_interval 5s
         proxy_ip 37.32.28.44
     }
     

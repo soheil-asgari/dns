@@ -50,7 +50,7 @@ func setup(c *caddy.Controller) error {
 		redisAddr = "redis:6379"
 	}
 	if refreshInterval == 0 {
-		refreshInterval = 60 * time.Second
+		refreshInterval = 5 * time.Second
 	}
 	if proxyIP == "" {
 		proxyIP = os.Getenv("GAMING_PROXY_IP")

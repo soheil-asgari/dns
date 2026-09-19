@@ -15,6 +15,13 @@ import (
 	"github.com/miekg/dns"
 )
 
+// wrappedPayload is used to optionally deserialize a wrapper object
+// in case the backend writes { "data": [...], "last_updated": "..." }
+// instead of a plain JSON array.
+type wrappedPayload struct {
+	Data []string `json:"data"`
+}
+
 type GamingFilter struct {
 	Next            plugin.Handler
 	redisClient     *redis.Client
@@ -41,10 +48,10 @@ func New(redisAddr string, refreshInterval time.Duration) *GamingFilter {
 }
 
 func (gf *GamingFilter) startRefresher() {
-	// 1. بارگذاری فوری و بدون معطلی در لحظه شروع
+	// 1. Immediate load on startup (won't block serving if Redis is empty)
 	gf.updateDomains()
 
-	// 2. تکرار منظم دوره‌ای
+	// 2. Periodic refresh
 	ticker := time.NewTicker(gf.refreshInterval)
 	defer ticker.Stop()
 
@@ -59,14 +66,24 @@ func (gf *GamingFilter) updateDomains() {
 
 	val, err := gf.redisClient.HGet(ctx, "DNSgaming:domains", "data").Result()
 	if err != nil {
-		log.Errorf("[gaming_filter] Redis HGET error (key: DNSgaming:domains): %v", err)
+		if err == redis.Nil {
+			log.Warningf("[gaming_filter] Redis key/field not found yet (DNSgaming:domains data); keeping existing cache")
+		} else {
+			log.Errorf("[gaming_filter] Redis HGET error (key: DNSgaming:domains): %v", err)
+		}
 		return
 	}
 
+	// Try to unmarshal as a plain JSON array first (preferred format)
 	var domains []string
 	if err := json.Unmarshal([]byte(val), &domains); err != nil {
-		log.Errorf("[gaming_filter] JSON unmarshal error for value '%s': %v", val, err)
-		return
+		// Fallback: try to unmarshal as a wrapper object { "data": [...], "last_updated": "..." }
+		var wrapped wrappedPayload
+		if err2 := json.Unmarshal([]byte(val), &wrapped); err2 != nil {
+			log.Errorf("[gaming_filter] JSON unmarshal error for value '%s': %v (also tried wrapper: %v)", val, err, err2)
+			return
+		}
+		domains = wrapped.Data
 	}
 
 	gf.mu.Lock()

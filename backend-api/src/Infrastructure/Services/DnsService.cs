@@ -95,6 +95,11 @@ public class DnsService : IDnsService
             .ToListAsync();
     }
 
+    /// <summary>
+    /// Writes a plain JSON array of domain strings to Redis.
+    /// The gaming_filter plugin expects field "data" under key "DNSgaming:domains"
+    /// containing a JSON array: ["dom1", "dom2", ...]
+    /// </summary>
     public async Task SyncDnsToRedisAsync()
     {
         var gamingDomains = await _context.GamingDomains
@@ -106,6 +111,11 @@ public class DnsService : IDnsService
         await _redisDb.HashSetAsync("DNSgaming:domains", "data", jsonPayload);
     }
 
+    /// <summary>
+    /// Writes a plain JSON array of combined domains (gaming + DNS records) to Redis.
+    /// The gaming_filter plugin expects field "data" under key "DNSgaming:domains"
+    /// containing a JSON array: ["dom1", "dom2", ...]
+    /// </summary>
     public async Task SyncToRedisAsync(CancellationToken cancellationToken = default)
     {
         // Fetch all active gaming domains
@@ -126,13 +136,8 @@ public class DnsService : IDnsService
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        var payload = new
-        {
-            data = combined,
-            last_updated = DateTime.UtcNow
-        };
-
-        var jsonPayload = JsonSerializer.Serialize(payload);
+        // Write a plain JSON array to match gaming_filter's expected format
+        var jsonPayload = JsonSerializer.Serialize(combined);
         await _redisDb.HashSetAsync("DNSgaming:domains", "data", jsonPayload);
     }
 
