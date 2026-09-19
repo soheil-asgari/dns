@@ -36,7 +36,18 @@ async function getBotToken(): Promise<string | null> {
   return null;
 }
 
+const BOT_TOKEN_PATTERN = /^\d+:[a-zA-Z0-9_-]+$/;
+
+function isTokenFormatValid(token: string): boolean {
+  return typeof token === 'string' && token.length > 0 && BOT_TOKEN_PATTERN.test(token);
+}
+
 async function startBot(token: string) {
+  if (!isTokenFormatValid(token)) {
+    logger.warn({ token: token ? `${token.slice(0, 5)}...` : '(empty)' }, 'Invalid bot token format, skipping launch');
+    return;
+  }
+
   if (running && bot) {
     logger.info('Bot already running, restarting with new token...');
     bot.stop('restart');
@@ -74,11 +85,23 @@ async function startBot(token: string) {
   // Setup callback query handlers (subscription flow)
   setupCallbacks(bot);
 
-  // Start bot
-  bot.launch(() => {
+  // Start bot with graceful error handling for invalid tokens
+  try {
+    await bot.launch();
     logger.info('Bot started');
     running = true;
-  });
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    if (errMsg.includes('404') || errMsg.includes('Not Found') || errMsg.includes('not found')) {
+      logger.warn(
+        'Provided bot token is invalid or not found on Telegram servers. Waiting for a valid token via Settings or Redis...'
+      );
+    } else {
+      logger.error({ err: errMsg }, 'Failed to launch bot');
+    }
+    bot = null;
+    running = false;
+  }
 
   process.once('SIGINT', () => bot?.stop('SIGINT'));
   process.once('SIGTERM', () => bot?.stop('SIGTERM'));
