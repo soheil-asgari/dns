@@ -134,16 +134,22 @@ async function handlePersistentKeyboard(ctx: Context, text: string, telegramId: 
     }
 
     case '⚡️ ثبت آی‌پی من': {
-      const url = buildQuickRegisterUrl(telegramId);
       await ctx.reply(
         '⚡️ *ثبت خودکار آی‌پی*\n\n' +
         'برای ثبت خودکار آی‌پی اینترنت خود، روی دکمه زیر کلیک کنید:\n\n' +
         'همچنین می‌توانید آی‌پی خود را به صورت دستی ارسال کنید.',
         {
           parse_mode: 'Markdown',
-          ...Markup.inlineKeyboard([
-            [Markup.button.url('⚡️ ثبت خودکار آی‌پی من', url)],
-          ]),
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: '🚀 ثبت و اتصال خودکار آی‌پی من',
+                  url: `http://37.32.28.44:8080/api/subscription/quick-register?telegramId=${ctx.from.id}`,
+                },
+              ],
+            ],
+          },
           ...mainKeyboard,
         }
       );
