@@ -3,43 +3,36 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#080a0f" />
-  <meta name="description" content="ثبت و اتصال سریع به شبکه Rhyno DNS" />
+  <meta name="theme-color" content="#0A0D14" />
+  <meta name="description" content="دروازه اتصال شبکه امن - DNS Protection & Acceleration" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <title>Rhyno DNS — ثبت سریع</title>
+  <title>اتصال شبکه امن</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --obsidian: #080a0f;
-      --glass-bg: rgba(17, 24, 39, 0.75);
-      --glass-border: rgba(99, 102, 241, 0.25);
-      --glass-shadow: 0 0 40px -10px rgba(99, 102, 241, 0.35);
-      --neon-indigo: #4f46e5;
+      --bg-deep: #0A0D14;
+      --card-bg: rgba(16, 22, 34, 0.85);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
       --neon-cyan: #06b6d4;
-      --neon-indigo-glow: rgba(79, 70, 229, 0.3);
-      --neon-cyan-glow: rgba(6, 182, 212, 0.2);
-      --accent: #6366f1;
-      --accent-hover: #4f46e5;
+      --neon-indigo: #6366f1;
+      --neon-emerald: #10B981;
       --text-primary: #e2e8f0;
       --text-secondary: #94a3b8;
       --text-muted: #64748b;
-      --success: #22c55e;
-      --success-glow: rgba(34, 197, 94, 0.25);
-      --success-bg: rgba(34, 197, 94, 0.1);
-      --error: #ef4444;
-      --error-bg: rgba(239, 68, 68, 0.1);
-      --amber: #f59e0b;
-      --radius-card: 24px;
+      --radius-card: 20px;
       --radius-sm: 12px;
       --radius-xs: 8px;
     }
 
     body {
       font-family: 'Vazirmatn', system-ui, -apple-system, sans-serif;
-      background: var(--obsidian);
+      background: var(--bg-deep);
+      background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+      background-size: 24px 24px;
       color: var(--text-primary);
       min-height: 100vh;
       display: flex;
@@ -47,90 +40,37 @@
       justify-content: center;
       padding: 20px;
       position: relative;
-      overflow: hidden;
     }
 
-    /* ===== Floating Neon Gradient Spheres ===== */
-    .sphere {
-      position: fixed;
-      border-radius: 50%;
-      pointer-events: none;
-      z-index: 0;
-      animation: sphere-float 20s infinite ease-in-out;
-    }
-    .sphere-1 {
-      width: 500px; height: 500px;
-      top: -10%; left: -10%;
-      background: radial-gradient(circle, rgba(79,70,229,0.25) 0%, transparent 70%);
-      filter: blur(80px);
-      animation-delay: 0s;
-    }
-    .sphere-2 {
-      width: 400px; height: 400px;
-      bottom: -15%; right: -10%;
-      background: radial-gradient(circle, rgba(6,182,212,0.2) 0%, transparent 70%);
-      filter: blur(80px);
-      animation-delay: -7s;
-    }
-    .sphere-3 {
-      width: 350px; height: 350px;
-      top: 40%; left: 50%;
-      background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%);
-      filter: blur(80px);
-      animation-delay: -14s;
-    }
-
-    @keyframes sphere-float {
-      0%, 100% { transform: translate(0, 0) scale(1); }
-      25% { transform: translate(60px, -40px) scale(1.05); }
-      50% { transform: translate(-30px, 30px) scale(0.95); }
-      75% { transform: translate(40px, 20px) scale(1.02); }
-    }
-
-    /* ===== Glassmorphism Card ===== */
+    /* ===== Card ===== */
     .card {
       position: relative;
       z-index: 1;
       width: 100%;
-      max-width: 480px;
-      background: var(--glass-bg);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      border: 1px solid var(--glass-border);
+      max-width: 460px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
       border-radius: var(--radius-card);
-      padding: 44px 36px 36px;
-      box-shadow: var(--glass-shadow);
+      padding: 40px 32px 32px;
+      box-shadow: var(--card-shadow);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       transition: box-shadow 0.5s ease, border-color 0.5s ease;
     }
     .card.success {
-      box-shadow: 0 0 50px -8px rgba(34, 197, 94, 0.3), 0 0 40px -10px rgba(99, 102, 241, 0.2);
-      border-color: rgba(34, 197, 94, 0.25);
+      border-color: rgba(16, 185, 129, 0.25);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 40px -8px rgba(16,185,129,0.15);
     }
 
-    /* ===== Ambient glow on card border ===== */
-    .card::before {
-      content: '';
-      position: absolute;
-      inset: -1px;
-      border-radius: var(--radius-card);
-      padding: 1px;
-      background: linear-gradient(135deg, rgba(99,102,241,0.3), transparent 40%, transparent 60%, rgba(6,182,212,0.2));
-      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-      -webkit-mask-composite: xor;
-      mask-composite: exclude;
-      pointer-events: none;
-      opacity: 0.6;
-    }
-
-    /* ===== Rhino SVG Icon ===== */
+    /* ===== Brand Identity ===== */
     .brand {
       text-align: center;
       margin-bottom: 28px;
     }
     .brand-icon {
-      width: 72px;
-      height: 72px;
-      margin: 0 auto 16px;
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 14px;
       animation: pulse-glow 3s infinite ease-in-out;
     }
     .brand-icon svg {
@@ -138,112 +78,152 @@
       height: 100%;
       display: block;
     }
-
     @keyframes pulse-glow {
-      0%, 100% { filter: drop-shadow(0 0 8px rgba(99,102,241,0.3)); transform: scale(1); }
-      50% { filter: drop-shadow(0 0 20px rgba(99,102,241,0.5)); transform: scale(1.03); }
+      0%, 100% { filter: drop-shadow(0 0 6px rgba(99,102,241,0.2)); transform: scale(1); }
+      50% { filter: drop-shadow(0 0 16px rgba(99,102,241,0.4)); transform: scale(1.02); }
     }
-
     .brand h1 {
-      font-size: 22px;
+      font-size: 20px;
       font-weight: 800;
       letter-spacing: -0.3px;
-      background: linear-gradient(135deg, #e2e8f0 0%, #94a3b8 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      color: var(--text-primary);
+      margin-bottom: 4px;
     }
-    .brand p {
-      color: var(--text-muted);
-      font-size: 13px;
-      margin-top: 4px;
-      font-weight: 500;
+    .brand-badge {
+      display: inline-block;
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--neon-cyan);
+      letter-spacing: 0.3px;
     }
 
-    /* ===== IP Badge with Radar Pulse ===== */
-    .ip-badge {
+    /* ===== Terminal IP Box ===== */
+    .ip-terminal {
       display: flex;
       align-items: center;
       gap: 12px;
-      background: rgba(99, 102, 241, 0.06);
-      border: 1px solid rgba(99, 102, 241, 0.15);
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.06);
       border-radius: var(--radius-sm);
       padding: 14px 18px;
       margin-bottom: 24px;
       direction: ltr;
       text-align: left;
-      position: relative;
-      overflow: hidden;
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
     }
-    .ip-badge::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(ellipse at 0% 50%, rgba(99,102,241,0.05) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    .ip-badge .ip-label {
+    .ip-terminal .ip-label {
       font-size: 11px;
       color: var(--text-muted);
       display: block;
       margin-bottom: 2px;
       direction: rtl;
       text-align: right;
+      font-family: 'Vazirmatn', system-ui, sans-serif;
+      font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
-    .ip-badge .ip-address {
+    .ip-terminal .ip-address {
       font-size: 18px;
       font-weight: 700;
-      font-family: 'JetBrains Mono', 'Courier New', monospace;
-      letter-spacing: 0.5px;
       color: var(--text-primary);
+      letter-spacing: 0.5px;
     }
 
-    /* Radar pulse dot */
-    .radar-dot {
-      width: 12px;
-      height: 12px;
+    /* ===== Status Dot ===== */
+    .status-dot {
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
       flex-shrink: 0;
       position: relative;
     }
-    .radar-dot.idle {
-      background: var(--amber);
-      box-shadow: 0 0 6px var(--amber);
-      animation: radar-pulse 2s infinite ease-in-out;
+    .status-dot.idle {
+      background: #10B981;
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+      animation: pulse-dot 2s infinite ease-in-out;
     }
-    .radar-dot.loading {
-      background: var(--accent);
-      box-shadow: 0 0 8px var(--accent);
-      animation: radar-pulse 0.8s infinite ease-in-out;
+    .status-dot.loading {
+      background: var(--neon-indigo);
+      box-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
+      animation: pulse-dot 0.8s infinite ease-in-out;
     }
-    .radar-dot.registered {
-      background: var(--success);
-      box-shadow: 0 0 12px var(--success-glow);
+    .status-dot.success {
+      background: #10B981;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.7);
       animation: none;
     }
-    .radar-dot.error {
-      background: var(--error);
-      box-shadow: 0 0 8px var(--error);
+    .status-dot.error {
+      background: #ef4444;
+      box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
       animation: none;
     }
-
-    @keyframes radar-pulse {
-      0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5); }
-      50% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+    @keyframes pulse-dot {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+      50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
     }
-    .radar-dot.loading {
-      animation-name: radar-pulse-loading;
+    .status-dot.loading {
+      animation-name: pulse-dot-loading;
     }
-    @keyframes radar-pulse-loading {
+    @keyframes pulse-dot-loading {
       0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.5); }
       50% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
       100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
     }
 
-    /* ===== Action Button ===== */
+    /* ===== Loading Ring (State B) ===== */
+    .loading-ring-container {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    .loading-ring-container.show { display: flex; }
+
+    .progress-ring {
+      width: 72px;
+      height: 72px;
+      position: relative;
+    }
+    .progress-ring svg {
+      transform: rotate(-90deg);
+    }
+    .progress-ring circle {
+      fill: none;
+      stroke-width: 3;
+      cx: 36; cy: 36; r: 32;
+    }
+    .progress-ring .ring-bg {
+      stroke: rgba(255, 255, 255, 0.06);
+    }
+    .progress-ring .ring-fg {
+      stroke: url(#ringGradient);
+      stroke-linecap: round;
+      stroke-dasharray: 201;
+      stroke-dashoffset: 201;
+      animation: fill-ring 2s ease-in-out forwards;
+    }
+    @keyframes fill-ring {
+      0% { stroke-dashoffset: 201; }
+      100% { stroke-dashoffset: 0; }
+    }
+
+    .loading-status {
+      font-size: 14px;
+      color: var(--text-secondary);
+      font-weight: 500;
+      text-align: center;
+      min-height: 24px;
+      transition: opacity 0.3s ease;
+    }
+
+    /* ===== Action Button (State A) ===== */
     .action-area {
       text-align: center;
       margin-bottom: 16px;
@@ -254,17 +234,17 @@
       justify-content: center;
       gap: 10px;
       width: 100%;
-      background: linear-gradient(135deg, var(--accent), var(--neon-indigo));
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
       color: #fff;
       border: none;
       border-radius: var(--radius-sm);
       padding: 16px 32px;
-      font-size: 17px;
+      font-size: 16px;
       font-weight: 600;
       font-family: 'Vazirmatn', system-ui, sans-serif;
       cursor: pointer;
       transition: transform 0.2s ease, box-shadow 0.3s ease;
-      box-shadow: 0 0 24px -4px var(--neon-indigo-glow);
+      box-shadow: 0 0 24px -4px rgba(99, 102, 241, 0.3);
       position: relative;
       overflow: hidden;
     }
@@ -277,46 +257,33 @@
     }
     .btn-primary:hover {
       transform: scale(1.02);
-      box-shadow: 0 0 36px -2px var(--neon-indigo-glow);
+      box-shadow: 0 0 36px -2px rgba(99, 102, 241, 0.4);
     }
     .btn-primary:active {
       transform: scale(0.98);
     }
     .btn-primary:disabled {
-      opacity: 0.65;
+      opacity: 0.6;
       cursor: not-allowed;
       transform: none;
     }
 
-    .btn-primary .spinner-ring {
-      width: 22px;
-      height: 22px;
-      border: 2.5px solid rgba(255,255,255,0.2);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      flex-shrink: 0;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
+    /* ===== Status Text ===== */
     .status-text {
       font-size: 13px;
       color: var(--text-muted);
       text-align: center;
-      margin-top: 12px;
+      margin-top: 8px;
       font-weight: 500;
     }
 
     /* ===== Error Box ===== */
     .error-box {
-      background: var(--error-bg);
-      border: 1px solid rgba(239, 68, 68, 0.2);
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.15);
       border-radius: var(--radius-sm);
       padding: 14px 18px;
-      color: var(--error);
+      color: #ef4444;
       font-size: 13px;
       text-align: center;
       display: none;
@@ -325,7 +292,7 @@
     }
     .error-box.show { display: block; }
 
-    /* ===== Success State ===== */
+    /* ===== Success Section (State C) ===== */
     .success-section {
       text-align: center;
       margin: 8px 0 20px;
@@ -333,69 +300,67 @@
     }
     .success-section.show { display: block; }
 
-    .success-badge {
+    .success-check {
       width: 72px;
       height: 72px;
       margin: 0 auto 16px;
-      background: var(--success-bg);
-      border: 1px solid rgba(34, 197, 94, 0.2);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       position: relative;
     }
-    .success-badge svg {
-      width: 40px;
-      height: 40px;
+    .success-check svg {
+      width: 100%;
+      height: 100%;
     }
-    .success-badge .check-path {
+    .success-check .check-ring {
+      stroke: rgba(16, 185, 129, 0.2);
+      stroke-width: 3;
+      fill: none;
+    }
+    .success-check .check-ring-fg {
+      stroke: #10B981;
+      stroke-width: 3;
+      fill: none;
+      stroke-linecap: round;
+      stroke-dasharray: 113;
+      stroke-dashoffset: 113;
+      animation: draw-ring 0.5s ease forwards;
+    }
+    .success-check .check-path {
+      stroke: #10B981;
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
       stroke-dasharray: 50;
       stroke-dashoffset: 50;
-      animation: drawCheck 0.6s ease forwards;
+      animation: draw-check 0.5s ease 0.3s forwards;
     }
-    @keyframes drawCheck {
-      to { stroke-dashoffset: 0; }
-    }
+    @keyframes draw-ring { to { stroke-dashoffset: 0; } }
+    @keyframes draw-check { to { stroke-dashoffset: 0; } }
 
     .success-title {
       font-size: 18px;
       font-weight: 700;
-      color: var(--success);
+      color: #10B981;
       margin-bottom: 6px;
     }
-    .success-ip {
-      font-size: 14px;
-      color: var(--text-secondary);
-      font-family: 'JetBrains Mono', monospace;
-      direction: ltr;
-      background: rgba(0,0,0,0.25);
-      display: inline-block;
-      padding: 4px 14px;
-      border-radius: var(--radius-xs);
-      border: 1px solid rgba(99,102,241,0.1);
-      margin-bottom: 16px;
-    }
 
-    /* ===== DNS Box ===== */
+    /* ===== DNS Info Box ===== */
     .dns-box {
       background: rgba(0, 0, 0, 0.3);
-      border: 1px solid rgba(99, 102, 241, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.06);
       border-radius: var(--radius-sm);
       padding: 20px;
       margin-bottom: 16px;
-      display: none;
+      margin-top: 16px;
     }
-    .dns-box.show { display: block; }
-
     .dns-box-title {
-      font-size: 13px;
+      font-size: 12px;
       color: var(--text-secondary);
       margin-bottom: 14px;
       text-align: center;
       font-weight: 600;
+      letter-spacing: 0.3px;
     }
-
     .dns-row {
       display: flex;
       align-items: center;
@@ -404,17 +369,15 @@
       direction: ltr;
     }
     .dns-row:last-child { margin-bottom: 0; }
-
     .dns-label {
-      font-size: 11px;
+      font-size: 10px;
       color: var(--text-muted);
-      min-width: 26px;
+      min-width: 22px;
       flex-shrink: 0;
-      font-weight: 600;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.3px;
+      letter-spacing: 0.5px;
     }
-
     .dns-value {
       flex: 1;
       background: rgba(0, 0, 0, 0.35);
@@ -424,18 +387,17 @@
       font-size: 15px;
       font-weight: 500;
       color: var(--text-primary);
-      border: 1px solid rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.05);
       direction: ltr;
       text-align: left;
       user-select: all;
     }
-
     .btn-copy {
-      background: rgba(99, 102, 241, 0.12);
-      border: 1px solid rgba(99, 102, 241, 0.18);
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.15);
       border-radius: var(--radius-xs);
       padding: 10px 14px;
-      color: var(--accent);
+      color: var(--neon-indigo);
       cursor: pointer;
       font-size: 12px;
       font-weight: 600;
@@ -447,17 +409,35 @@
       text-align: center;
     }
     .btn-copy:hover {
-      background: rgba(99, 102, 241, 0.22);
+      background: rgba(99, 102, 241, 0.2);
       border-color: rgba(99, 102, 241, 0.3);
       transform: translateY(-1px);
     }
-    .btn-copy:active {
-      transform: translateY(0);
-    }
+    .btn-copy:active { transform: translateY(0); }
     .btn-copy.copied {
-      background: rgba(34, 197, 94, 0.15);
-      color: var(--success);
-      border-color: rgba(34, 197, 94, 0.25);
+      background: rgba(16, 185, 129, 0.15);
+      color: #10B981;
+      border-color: rgba(16, 185, 129, 0.25);
+    }
+
+    /* ===== Countdown Timer Badge ===== */
+    .timer-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.15);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #10B981;
+      margin-bottom: 16px;
+    }
+    .timer-badge svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
     }
 
     /* ===== Back Button ===== */
@@ -467,8 +447,8 @@
       text-align: center;
       padding: 14px;
       border-radius: var(--radius-sm);
-      background: rgba(99, 102, 241, 0.06);
-      border: 1px solid rgba(99, 102, 241, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
       color: var(--text-secondary);
       text-decoration: none;
       font-size: 14px;
@@ -479,18 +459,19 @@
     }
     .btn-back.show { display: block; }
     .btn-back:hover {
-      background: rgba(99, 102, 241, 0.12);
+      background: rgba(255, 255, 255, 0.08);
       color: var(--text-primary);
-      border-color: rgba(99, 102, 241, 0.2);
+      border-color: rgba(255, 255, 255, 0.1);
     }
 
     /* ===== Responsive ===== */
     @media (max-width: 500px) {
-      .card { padding: 32px 20px 28px; }
-      .brand h1 { font-size: 19px; }
-      .brand-icon { width: 60px; height: 60px; }
-      .ip-badge .ip-address { font-size: 15px; }
-      .btn-primary { font-size: 15px; padding: 14px 24px; }
+      .card { padding: 28px 20px 24px; }
+      .brand h1 { font-size: 17px; }
+      .brand-icon { width: 52px; height: 52px; }
+      .ip-terminal { padding: 12px 14px; }
+      .ip-terminal .ip-address { font-size: 15px; }
+      .btn-primary { font-size: 14px; padding: 14px 24px; }
       .success-title { font-size: 16px; }
       .dns-value { font-size: 13px; padding: 8px 12px; }
       .btn-copy { padding: 8px 12px; font-size: 11px; min-width: 40px; }
@@ -498,97 +479,117 @@
   </style>
 </head>
 <body>
-  <!-- Floating Neon Gradient Spheres -->
-  <div class="sphere sphere-1"></div>
-  <div class="sphere sphere-2"></div>
-  <div class="sphere sphere-3"></div>
 
   <div class="card" id="app">
-    <!-- Brand / Identity -->
+
+    <!-- Brand / Network Gateway Identity -->
     <div class="brand">
       <div class="brand-icon">
-        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <linearGradient id="rhinoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stop-color="#6366f1"/>
-              <stop offset="50%" stop-color="#8b5cf6"/>
+              <stop offset="100%" stop-color="#06b6d4"/>
+            </linearGradient>
+            <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#6366f1"/>
               <stop offset="100%" stop-color="#06b6d4"/>
             </linearGradient>
           </defs>
-          <!-- Rhino geometric body -->
-          <path d="M30 65 L30 50 Q30 35 42 30 L58 30 Q70 35 70 50 L70 65 Q70 72 62 72 L38 72 Q30 72 30 65Z"
-                fill="url(#rhinoGrad)" opacity="0.9"/>
-          <!-- Head -->
-          <path d="M22 50 Q18 44 20 38 Q22 32 28 32 L34 32 Q30 38 30 45 L30 55 Q28 58 24 56 Q20 54 22 50Z"
-                fill="url(#rhinoGrad)" opacity="0.85"/>
-          <!-- Horn -->
-          <path d="M20 38 Q18 32 20 26 Q22 20 26 18 L24 24 Q22 28 22 34Z"
-                fill="url(#rhinoGrad)" opacity="0.95"/>
-          <!-- Eye -->
-          <circle cx="26" cy="36" r="2.5" fill="#080a0f"/>
-          <!-- Ear -->
-          <path d="M28 32 Q30 26 34 28 Q32 30 30 32Z"
-                fill="url(#rhinoGrad)" opacity="0.7"/>
-          <!-- Legs -->
-          <rect x="34" y="72" width="6" height="12" rx="2" fill="url(#rhinoGrad)" opacity="0.8"/>
-          <rect x="46" y="72" width="6" height="12" rx="2" fill="url(#rhinoGrad)" opacity="0.8"/>
-          <rect x="58" y="72" width="6" height="10" rx="2" fill="url(#rhinoGrad)" opacity="0.8"/>
-          <!-- Tail -->
-          <path d="M70 50 Q76 48 78 52 Q80 56 76 58"
-                stroke="url(#rhinoGrad)" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.7"/>
+          <!-- Shield outline -->
+          <path d="M40 8 L40 8 Q40 8 40 8 L64 20 L64 44 Q64 60 40 72 L40 72 Q16 60 16 44 L16 20 Z"
+                stroke="url(#brandGrad)" stroke-width="2" fill="none" opacity="0.7"/>
+          <!-- Inner node/pulse -->
+          <circle cx="40" cy="38" r="6" fill="url(#brandGrad)" opacity="0.9"/>
+          <!-- Connecting arcs -->
+          <path d="M26 30 Q34 34 40 38 Q46 42 54 46" stroke="url(#brandGrad)" stroke-width="1.5" fill="none" opacity="0.5"/>
+          <path d="M26 46 Q34 42 40 38 Q46 34 54 30" stroke="url(#brandGrad)" stroke-width="1.5" fill="none" opacity="0.3"/>
+          <!-- Center dot -->
+          <circle cx="40" cy="38" r="2.5" fill="#e2e8f0"/>
+          <!-- Pulse ring -->
+          <circle cx="40" cy="38" r="12" stroke="url(#brandGrad)" stroke-width="1" fill="none" opacity="0.4">
+            <animate attributeName="r" values="12;18;12" dur="3s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0.4;0;0.4" dur="3s" repeatCount="indefinite"/>
+          </circle>
         </svg>
       </div>
-      <h1>Rhyno DNS Network</h1>
-      <p>سرویس رفع تحریم و امنیت شبکه</p>
+      <h1>دروازه اتصال شبکه امن</h1>
+      <span class="brand-badge">DNS Protection & Acceleration</span>
     </div>
 
     <!-- Error -->
     <div class="error-box" id="errorBox"></div>
 
-    <!-- IP Badge with Radar -->
-    <div class="ip-badge">
-      <span class="radar-dot idle" id="statusDot"></span>
+    <!-- IP Terminal (State A) -->
+    <div class="ip-terminal" id="ipTerminal">
+      <span class="status-dot idle" id="statusDot"></span>
       <div>
-        <span class="ip-label">🌐 آی‌پی اینترنت شما</span>
+        <span class="ip-label">آی‌پی شناسایی‌شده</span>
         <span class="ip-address" id="ipDisplay">—</span>
       </div>
     </div>
 
-    <!-- Action Button -->
+    <!-- Loading Ring (State B) -->
+    <div class="loading-ring-container" id="loadingRing">
+      <div class="progress-ring">
+        <svg width="72" height="72" viewBox="0 0 72 72">
+          <defs>
+            <linearGradient id="ringGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#6366f1"/>
+              <stop offset="100%" stop-color="#06b6d4"/>
+            </linearGradient>
+          </defs>
+          <circle class="ring-bg" cx="36" cy="36" r="32"/>
+          <circle class="ring-fg" cx="36" cy="36" r="32" stroke="url(#ringGrad2)"/>
+        </svg>
+      </div>
+      <div class="loading-status" id="loadingStatus">۱/۳ در حال اعتبارسنجی نشست امن...</div>
+    </div>
+
+    <!-- Action Button (State A) -->
     <div class="action-area">
       <button class="btn-primary" id="actionBtn" onclick="handleAction()">
-        <span id="btnText">⚡️ تایید و اتصال سریع به شبکه</span>
+        <span id="btnText">⚡️ ثبت و اتصال آنی به شبکه</span>
       </button>
     </div>
     <div class="status-text" id="statusText">برای شروع دکمه بالا را بزنید</div>
 
-    <!-- Success Section -->
+    <!-- Success Section (State C) -->
     <div class="success-section" id="successSection">
-      <div class="success-badge">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path class="check-path" d="M5 13l4 4L19 7" />
+      <div class="success-check">
+        <svg viewBox="0 0 48 48" fill="none">
+          <circle class="check-ring" cx="24" cy="24" r="20" />
+          <circle class="check-ring-fg" cx="24" cy="24" r="20" />
+          <path class="check-path" d="M16 24l6 6 10-10" />
         </svg>
       </div>
-      <div class="success-title">اتصال با موفقیت فعال شد!</div>
-      <div class="success-ip" id="successIpDisplay">آی‌پی فعال: —</div>
+      <div class="success-title">اتصال با موفقیت فعال شد</div>
+
+      <!-- Timer Badge -->
+      <div class="timer-badge" id="timerBadge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+        </svg>
+        <span id="timerText">مدت اعتبار باقی‌مانده: ۲۴ ساعت</span>
+      </div>
 
       <!-- DNS Box -->
-      <div class="dns-box show">
-        <div class="dns-box-title">⚙️ تنظیمات DNS سرور</div>
+      <div class="dns-box">
+        <div class="dns-box-title">تنظیمات DNS سرور</div>
         <div class="dns-row">
           <span class="dns-label">۱</span>
           <span class="dns-value" id="dnsPrimary">37.32.28.44</span>
-          <button class="btn-copy" onclick="copyDns('dnsPrimary', this)">📋 کپی</button>
+          <button class="btn-copy" onclick="copyDns('dnsPrimary', this)">کپی</button>
         </div>
         <div class="dns-row">
           <span class="dns-label">۲</span>
           <span class="dns-value" id="dnsSecondary">1.1.1.1</span>
-          <button class="btn-copy" onclick="copyDns('dnsSecondary', this)">📋 کپی</button>
+          <button class="btn-copy" onclick="copyDns('dnsSecondary', this)">کپی</button>
         </div>
       </div>
 
       <!-- Back to Bot -->
-      <a class="btn-back show" id="backBtn" href="https://t.me/rhyno_dns_bot" target="_blank">↩️ بازگشت به تلگرام</a>
+      <a class="btn-back show" id="backBtn" href="https://t.me/rhyno_dns_bot" target="_blank">بازگشت به ربات تلگرام</a>
     </div>
   </div>
 
@@ -605,7 +606,9 @@
     const statusText = document.getElementById('statusText');
     const errorBox = document.getElementById('errorBox');
     const successSection = document.getElementById('successSection');
-    const successIpDisplay = document.getElementById('successIpDisplay');
+    const timerText = document.getElementById('timerText');
+    const loadingRing = document.getElementById('loadingRing');
+    const loadingStatus = document.getElementById('loadingStatus');
 
     let detectedIp = '';
 
@@ -618,55 +621,74 @@
       errorBox.classList.remove('show');
     }
 
-    function setStatusDot(state) {
-      statusDot.className = 'radar-dot ' + state;
+    function setState(state) {
+      statusDot.className = 'status-dot ' + state;
     }
 
     function showSuccess(ip, remainingHours) {
-      // Hide action area
       actionBtn.style.display = 'none';
       statusText.style.display = 'none';
-      // Show success
-      setStatusDot('registered');
+      loadingRing.classList.remove('show');
+      setState('success');
       successSection.classList.add('show');
-      successIpDisplay.textContent = 'آی‌پی فعال: ' + ip;
       document.querySelector('.card').classList.add('success');
+
+      const hrs = Math.round(remainingHours);
+      timerText.textContent = `مدت اعتبار باقی‌مانده: ${hrs} ساعت`;
     }
 
-    function setLoading(isLoading) {
+    function showLoading(isLoading) {
       if (isLoading) {
-        actionBtn.disabled = true;
-        btnText.innerHTML = '<span class="spinner-ring"></span> در حال اعتبارسنجی و ثبت در فایروال...';
-        setStatusDot('loading');
-        statusText.textContent = 'در حال ارتباط با سرور...';
+        actionBtn.style.display = 'none';
+        statusText.style.display = 'none';
+        loadingRing.classList.add('show');
+        setState('loading');
+        runLoadingSequence();
       } else {
-        actionBtn.disabled = false;
-        btnText.innerHTML = '⚡️ تایید و اتصال سریع به شبکه';
+        actionBtn.style.display = 'block';
+        statusText.style.display = 'block';
+        loadingRing.classList.remove('show');
       }
     }
 
-    // Detect IP on load
+    function runLoadingSequence() {
+      const steps = [
+        '۱/۳ در حال اعتبارسنجی نشست امن...',
+        '۲/۳ پیکربندی فایروال و لیست سفید...',
+        '۳/۳ فعال‌سازی مسیر DNS...'
+      ];
+      let i = 0;
+      loadingStatus.textContent = steps[0];
+      const interval = setInterval(() => {
+        i++;
+        if (i < steps.length) {
+          loadingStatus.textContent = steps[i];
+        } else {
+          clearInterval(interval);
+        }
+      }, 700);
+    }
+
     async function detectIp() {
       try {
-        setStatusDot('loading');
+        setState('loading');
         statusText.textContent = 'در حال شناسایی آی‌پی...';
         const res = await fetch(API_BASE + '/ip/detect');
         const data = await res.json();
         detectedIp = data.ip;
         ipDisplay.textContent = detectedIp;
-        setStatusDot('idle');
+        setState('idle');
         statusText.textContent = 'آی‌پی شما شناسایی شد. آماده ثبت.';
         actionBtn.disabled = false;
       } catch (err) {
         ipDisplay.textContent = 'خطا';
-        setStatusDot('error');
+        setState('error');
         statusText.textContent = 'شناسایی آی‌پی ممکن نیست';
         showError('خطا در شناسایی آی‌پی اینترنت. لطفاً صفحه را مجدداً بارگذاری کنید.');
         actionBtn.disabled = true;
       }
     }
 
-    // Parse the new JSON response
     async function callQuickRegister() {
       const res = await fetch(`${API_BASE}/subscription/quick-register?telegramId=${telegramId}&sign=${sign}`);
       const data = await res.json();
@@ -676,21 +698,18 @@
       return data;
     }
 
-    // Auto-register if id & sign present
     async function autoRegister() {
       if (telegramId && sign) {
-        setLoading(true);
+        showLoading(true);
         hideError();
         try {
           const data = await callQuickRegister();
-          setStatusDot('registered');
-          statusText.textContent = '✅ آی‌پی با موفقیت ثبت شد';
+          setState('success');
           showSuccess(data.ip, data.remainingHours);
         } catch (err) {
-          setStatusDot('error');
-          statusText.textContent = 'ثبت ناموفق';
+          setState('error');
           showError(err.message || 'خطا در ثبت آی‌پی. لطفاً دوباره تلاش کنید یا به ربات مراجعه کنید.');
-          setLoading(false);
+          showLoading(false);
         }
       } else {
         actionBtn.disabled = true;
@@ -707,18 +726,16 @@
         showError('لینک معتبر نیست. لطفاً از ربات تلگرام استفاده کنید.');
         return;
       }
-      setLoading(true);
+      showLoading(true);
       hideError();
       try {
         const data = await callQuickRegister();
-        setStatusDot('registered');
-        statusText.textContent = '✅ ثبت موفق';
+        setState('success');
         showSuccess(data.ip, data.remainingHours);
       } catch (err) {
-        setStatusDot('error');
-        statusText.textContent = 'خطای شبکه';
+        setState('error');
         showError(err.message || 'خطا در ارتباط با سرور.');
-        setLoading(false);
+        showLoading(false);
       }
     }
 
@@ -726,24 +743,23 @@
       const text = document.getElementById(elementId).textContent;
       try {
         await navigator.clipboard.writeText(text);
-        btn.textContent = '✅ کپی شد!';
+        btn.textContent = 'کپی شد!';
         btn.classList.add('copied');
         setTimeout(() => {
-          btn.textContent = '📋 کپی';
+          btn.textContent = 'کپی';
           btn.classList.remove('copied');
         }, 2000);
       } catch {
-        // Fallback
         const textarea = document.createElement('textarea');
         textarea.value = text;
         document.body.appendChild(textarea);
         textarea.select();
         document.execCommand('copy');
         document.body.removeChild(textarea);
-        btn.textContent = '✅ کپی شد!';
+        btn.textContent = 'کپی شد!';
         btn.classList.add('copied');
         setTimeout(() => {
-          btn.textContent = '📋 کپی';
+          btn.textContent = 'کپی';
           btn.classList.remove('copied');
         }, 2000);
       }

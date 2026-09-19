@@ -9,10 +9,12 @@ namespace WebApi.Controllers;
 public class SubscriptionController : ControllerBase
 {
     private readonly ISubscriptionService _subscriptionService;
+    private readonly ILogger<SubscriptionController> _logger;
 
-    public SubscriptionController(ISubscriptionService subscriptionService)
+    public SubscriptionController(ISubscriptionService subscriptionService, ILogger<SubscriptionController> logger)
     {
         _subscriptionService = subscriptionService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -64,14 +66,16 @@ public class SubscriptionController : ControllerBase
         if (telegramId == 0)
             return BadRequest(new { success = false, message = "TelegramId is required" });
 
-        // Verify HMAC-SHA256 signature
-        var botToken = await GetBotTokenFromDbAsync();
-        if (string.IsNullOrEmpty(botToken))
-            return BadRequest(new { success = false, message = "توکن ربات پیکربندی نشده است." });
+        // Verify HMAC-SHA256 signature using unified secret
+        var hmacSecret = Environment.GetEnvironmentVariable("HMAC_SECRET") ?? "RhynoDns_Secure_HMAC_Secret_Key_2026_!@#";
+        using var hmac = new System.Security.Cryptography.HMACSHA256(System.Text.Encoding.UTF8.GetBytes(hmacSecret));
+        var expectedHash = BitConverter.ToString(hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(telegramId.ToString()))).Replace("-", "").ToLowerInvariant();
 
-        var expectedSign = HmacSha256(botToken, telegramId.ToString());
-        if (!string.Equals(sign, expectedSign, StringComparison.OrdinalIgnoreCase))
-            return BadRequest(new { success = false, message = "امضای امنیتی نامعتبر است یا کاربر یافت نشد." });
+        if (!string.Equals(sign?.Trim(), expectedHash, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning($"Signature mismatch! TelegramId: {telegramId}, Received: '{sign}', Expected: '{expectedHash}'");
+            return BadRequest(new { success = false, message = "امضای امنیتی نامعتبر است. لطفاً از طریق دکمه تلگرام وارد شوید." });
+        }
 
         // Extract real client IP (ArvanCloud CDN sends Ar-Real-IP)
         string? clientIp = null;
@@ -108,32 +112,17 @@ public class SubscriptionController : ControllerBase
         if (!success)
             return BadRequest(new { success = false, message = "امضای امنیتی نامعتبر است یا کاربر یافت نشد." });
 
-        // Calculate remaining hours from the registered subscription
-        var remainingHours = await _subscriptionService.GetRemainingHoursAsync(telegramId);
+        // Calculate remaining time from the registered subscription
+        var remainingTime = await _subscriptionService.GetRemainingTimeAsync(telegramId);
 
         return Ok(new
         {
             success = true,
-            message = "آی‌پی با موفقیت فعال شد",
             ip = clientIp,
-            remainingHours,
-            primaryDns = "37.32.28.44"
+            remainingHours = remainingTime.TotalHours,
+            primaryDns = "37.32.28.44",
+            secondaryDns = "1.1.1.1"
         });
-    }
-
-    private async Task<string?> GetBotTokenFromDbAsync()
-    {
-        using var scope = HttpContext.RequestServices.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<Infrastructure.Data.AppDbContext>();
-        var setting = await db.SystemSettings.FindAsync("bot_token");
-        return setting?.Value;
-    }
-
-    private static string HmacSha256(string key, string data)
-    {
-        using var hmac = new System.Security.Cryptography.HMACSHA256(System.Text.Encoding.UTF8.GetBytes(key));
-        var hash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(data));
-        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
     /// <summary>

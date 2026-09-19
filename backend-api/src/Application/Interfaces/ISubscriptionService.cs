@@ -9,6 +9,7 @@ public interface ISubscriptionService
     Task<SubscriptionStatusDto> GetSubscriptionStatusAsync(long telegramId);
     Task<bool> RegisterIpAsync(long telegramId, string ipAddress);
     Task<int> GetRemainingHoursAsync(long telegramId);
+    Task<TimeSpan> GetRemainingTimeAsync(long telegramId);
 }
 
 public class UserDto

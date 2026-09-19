@@ -117,8 +117,8 @@ export async function detectIp() {
 
 /** Generate HMAC-SHA256 signature for quick-register URL */
 export function buildQuickRegisterUrl(telegramId: number): string {
-  const botToken = process.env.BOT_TOKEN || '';
-  const sign = crypto.createHmac('sha256', botToken).update(telegramId.toString()).digest('hex');
+  const hmacSecret = process.env.HMAC_SECRET || "RhynoDns_Secure_HMAC_Secret_Key_2026_!@#";
+  const sign = crypto.createHmac("sha256", hmacSecret).update(telegramId.toString()).digest("hex");
   const baseUrl = process.env.PORTAL_PUBLIC_URL || 'https://dns.rhynoai.ir';
   return `${baseUrl}/ip?id=${telegramId}&sign=${sign}`;
 }

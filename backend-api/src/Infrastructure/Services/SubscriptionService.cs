@@ -191,6 +191,24 @@ public class SubscriptionService : ISubscriptionService
         return (int)Math.Ceiling((activeSub.EndDate - DateTime.UtcNow).TotalHours);
     }
 
+    public async Task<TimeSpan> GetRemainingTimeAsync(long telegramId)
+    {
+        var user = await _context.Users
+            .Include(u => u.Subscriptions)
+            .FirstOrDefaultAsync(u => u.TelegramId == telegramId);
+
+        if (user == null) return TimeSpan.Zero;
+
+        var activeSub = user.Subscriptions
+            .Where(s => s.IsActive && s.EndDate > DateTime.UtcNow)
+            .OrderByDescending(s => s.EndDate)
+            .FirstOrDefault();
+
+        if (activeSub == null) return TimeSpan.Zero;
+
+        return activeSub.EndDate - DateTime.UtcNow;
+    }
+
     private static SubscriptionDto MapSubscriptionDto(Subscription s)
     {
         return new SubscriptionDto
