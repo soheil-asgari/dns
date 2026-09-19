@@ -55,6 +55,8 @@ services:
     build:
       context: ./backend-api
       dockerfile: Dockerfile
+    extra_hosts:
+      - "api.telegram.org:10.10.0.1"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://0.0.0.0:8080
