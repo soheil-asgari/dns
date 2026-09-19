@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/authStore';
 
 export default function LoginPage() {
+  const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -9,7 +11,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   if (isAuthenticated) {
-    window.location.href = '/panel';
+    navigate('/panel', { replace: true });
     return null;
   }
 
@@ -20,7 +22,7 @@ export default function LoginPage() {
     const result = await login(username, password);
     setLoading(false);
     if (result.success) {
-      window.location.href = '/panel';
+      navigate('/panel', { replace: true });
     } else {
       setError(result.message || 'Login failed');
     }

@@ -34,9 +34,9 @@ public class SettingsController : ControllerBase
         var setting = await _db.SystemSettings.FindAsync("bot_token");
         var token = setting?.Value ?? string.Empty;
 
-        // Check Redis cache
+        // Prefer DB value as source of truth; fall back to Redis cache only if valid
         var cached = await _cache.GetStringAsync("config:bot_token");
-        if (!string.IsNullOrEmpty(cached))
+        if (!string.IsNullOrEmpty(cached) && cached != "config:bot_token")
             token = cached;
 
         var isInternal = Request.Headers["X-Internal-Service"].FirstOrDefault() == "telegram-bot";
