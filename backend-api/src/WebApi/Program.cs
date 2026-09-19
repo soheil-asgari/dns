@@ -104,6 +104,8 @@ using (var scope = app.Services.CreateScope())
     try
     {
         logger.LogInformation("Applying EF Core migrations for AppDbContext...");
+        var pending = await db.Database.GetPendingMigrationsAsync();
+        logger.LogInformation("Pending migrations: {Count}", pending.Count());
         await db.Database.MigrateAsync();
         logger.LogInformation("Migrations applied successfully.");
     }

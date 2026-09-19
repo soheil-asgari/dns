@@ -1,12 +1,15 @@
 using System;
+using Infrastructure.Data;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable enable
 
 namespace Infrastructure.Data.Migrations
 {
-    /// <inheritdoc />
-    public partial class AddUsersAndSubscriptions : Migration
+    [DbContext(typeof(AppDbContext))]
+    [Migration("20260919072100_AddUsersAndSubscriptions")]
+    partial class AddUsersAndSubscriptions : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

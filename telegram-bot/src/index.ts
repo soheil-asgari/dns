@@ -36,10 +36,10 @@ async function getBotToken(): Promise<string | null> {
   return null;
 }
 
-const BOT_TOKEN_PATTERN = /^\d+:[a-zA-Z0-9_-]+$/;
+const BOT_TOKEN_PATTERN = /^\d+:[A-Za-z0-9_-]{30,}$/;
 
 function isTokenFormatValid(token: string): boolean {
-  return typeof token === 'string' && token.length > 0 && BOT_TOKEN_PATTERN.test(token);
+  return typeof token === 'string' && BOT_TOKEN_PATTERN.test(token);
 }
 
 async function startBot(token: string) {
@@ -102,9 +102,13 @@ async function startBot(token: string) {
     bot = null;
     running = false;
   }
+}
 
-  process.once('SIGINT', () => bot?.stop('SIGINT'));
-  process.once('SIGTERM', () => bot?.stop('SIGTERM'));
+function setupProcessHandlers(botInstance: Telegraf | null) {
+  process.removeAllListeners('SIGINT');
+  process.removeAllListeners('SIGTERM');
+  process.once('SIGINT', () => botInstance?.stop('SIGINT'));
+  process.once('SIGTERM', () => botInstance?.stop('SIGTERM'));
 }
 
 async function init() {
@@ -119,30 +123,28 @@ async function init() {
         clearInterval(retryInterval);
         logger.info('Token obtained after retry, starting bot...');
         await startBot(newToken);
+        setupProcessHandlers(bot);
       }
     }, 30_000);
   } else {
     await startBot(token);
+    setupProcessHandlers(bot);
   }
 
   // Subscribe to Redis for dynamic token updates
   try {
     const { createClient } = await import('redis');
     const redisUrl = process.env.REDIS_URL || 'redis://redis:6379';
-    const subscriber = createClient({ url: redisUrl });
-    await (subscriber as any).connect?.();
-    await subscriber.subscribe('config:bot_token_changed', async (err, reply) => {
-      if (err) {
-        logger.warn({ err: err.message }, 'Redis pub/sub subscription error');
-        return;
-      }
-      if (!reply) return;
-      if (!isTokenFormatValid(reply)) {
-        logger.warn({ payload: reply.slice(0, 5) + '...' }, 'Received invalid bot token via Redis pub/sub, ignoring');
+    const subscriber: any = createClient({ url: redisUrl });
+    await subscriber.connect();
+    await subscriber.subscribe('config:bot_token_changed', (message: string) => {
+      if (!message) return;
+      if (!isTokenFormatValid(message)) {
+        logger.warn({ payload: message.slice(0, 5) + '...' }, 'Received invalid bot token via Redis pub/sub, ignoring');
         return;
       }
       logger.info('Bot token changed via Redis pub/sub, restarting...');
-      await startBot(reply);
+      startBot(message).then(() => setupProcessHandlers(bot));
     });
   } catch (err: unknown) {
     const errMsg = err instanceof Error ? err.message : String(err);
