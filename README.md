@@ -40,6 +40,8 @@ docker compose ps
 | Redis | 6379 | Cache & session store |
 | SQL Server | 1433 | Primary database |
 
+---
+
 ## 🚀 One-Line Quick Deployment
 
 ### Prerequisites
@@ -47,6 +49,7 @@ docker compose ps
 - A **Germany VPS** (Exit Node) — fresh Ubuntu 22.04/24.04 with root access.
 - An **Iran VPS** (Edge Node) — fresh Ubuntu 22.04/24.04 with root access.
 - Both servers must be able to reach each other over the internet.
+- No manual key exchange needed — a pre-generated keypair is embedded in the scripts.
 
 ### Server 1 — Germany (Exit Node)
 
@@ -56,16 +59,24 @@ Run this on the **Germany VPS** as root:
 curl -sSL https://raw.githubusercontent.com/your-org/your-repo/main/scripts/setup-germany.sh | bash
 ```
 
+**Override keys via environment variables (optional):**
+```bash
+curl -sSL .../setup-germany.sh | WG_IRAN_PUBKEY="<custom>" WG_GER_PRIVKEY="<custom>" bash
+```
+
 This script will:
 - Install `wireguard`, `sniproxy`, `iptables`, `curl`.
 - Configure `sniproxy` to listen on port `443` with TLS, using `1.1.1.1` / `8.8.8.8` resolvers.
+- Clean up any zombie `sniproxy` processes before starting the service.
 - Enable IPv4 forwarding (persistent via `sysctl.conf`).
-- Generate a WireGuard keypair and configure the server (`10.10.0.1/24`, port `51820`).
+- Use the embedded Germany keypair (overridable via `WG_GER_PRIVKEY`) and Iran peer key (overridable via `WG_IRAN_PUBKEY`).
 - Dynamically detect the default network interface for iptables MASQUERADE.
 - Start and enable `wg-quick@wg0` and `sniproxy`.
+- Run a self-check: confirms `wg0` is UP and port 443 is listening.
 
 > [!IMPORTANT]
-> After the script completes, **copy the displayed server public key**. You will need it for the Iran server.
+> **Zero key exchange needed** — the scripts use a pre-generated static keypair.
+> If you need custom keys for production, set `WG_IRAN_PUBKEY` and `WG_GER_PRIVKEY` env vars.
 
 ---
 
@@ -74,33 +85,48 @@ This script will:
 Run this on the **Iran VPS** as root, passing the Germany VPS public IP:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/your-org/your-repo/main/scripts/setup-iran.sh | GERMANY_IP=<GERMANY_VPS_PUBLIC_IP> bash
+GERMANY_IP="x.x.x.x" curl -sSL https://raw.githubusercontent.com/your-org/your-repo/main/scripts/setup-iran.sh | bash
 ```
 
 **Example:**
 ```bash
-curl -sSL https://raw.githubusercontent.com/your-org/your-repo/main/scripts/setup-iran.sh | GERMANY_IP=1.2.3.4 bash
+GERMANY_IP=1.2.3.4 curl -sSL https://raw.githubusercontent.com/your-org/your-repo/main/scripts/setup-iran.sh | bash
+```
+
+**Override keys via environment variables (optional):**
+```bash
+GERMANY_IP=1.2.3.4 WG_IRAN_PRIVKEY="<custom>" WG_GER_PUBKEY="<custom>" curl -sSL .../setup-iran.sh | bash
 ```
 
 This script will:
 - Validate the provided `GERMANY_IP` (must be a valid IPv4 address).
 - Install `wireguard`, `curl`, `git`, `docker`, `docker-compose-plugin`.
-- Generate a WireGuard client keypair and configure `10.10.0.2/24`.
-- Connect to the Germany server endpoint `${GERMANY_IP}:51820` with `PersistentKeepalive = 25`.
+- Use the embedded Iran keypair (overridable via `WG_IRAN_PRIVKEY`) and Germany peer key (overridable via `WG_GER_PUBKEY`).
+- Configure WireGuard client to connect to `${GERMANY_IP}:51820` with `AllowedIPs = 10.10.0.1/32` and `PersistentKeepalive = 25`.
 - Start and enable `wg-quick@wg0`, then verify tunnel ping to `10.10.0.1`.
 - Clone (or pull) the repository and run `docker compose up -d`.
+- Automatically run the full diagnostic suite ([`scripts/doctor.sh`](scripts/doctor.sh)).
 
-> [!IMPORTANT]
-> After both scripts complete, **exchange public keys**:
-> 1. On the Germany server, edit `/etc/wireguard/wg0.conf` and set `[Peer] PublicKey` to the Iran client's public key.
-> 2. On the Iran server, edit `/etc/wireguard/wg0.conf` and set `[Peer] PublicKey` to the Germany server's public key.
-> 3. Restart WireGuard on both: `systemctl restart wg-quick@wg0`
+---
+
+### Post-Deployment Diagnostics
+
+Run the diagnostic tool anytime from the Iran server:
+
+```bash
+./scripts/doctor.sh
+```
+
+This performs 5 health checks with colored output:
+1. **Interface** — confirms `wg0` exists
+2. **Handshake** — alerts if handshake is older than 180s (firewall hint)
+3. **Tunnel Ping** — tests reachability of `10.10.0.1`
+4. **SNI Proxy** — checks port 443 is open inside the tunnel
+5. **End-to-End TLS** — validates HTTPS via HAProxy/CoreDNS
 
 ---
 
 ### Verification Steps
-
-After key exchange and restart, verify the tunnel from the Iran server:
 
 ```bash
 # Ping the Germany tunnel IP
