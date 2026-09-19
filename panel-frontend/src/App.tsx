@@ -10,9 +10,23 @@ import Analytics from './pages/Analytics';
 import SettingsPage from './pages/Settings';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const token = localStorage.getItem('auth_token');
   const { isAuthenticated, isLoading } = useAuth();
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Loading...</div>;
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+
+  // Immediately redirect to login if no token — before mounting data-fetching children
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Loading...</div>;
+  }
+
+  if (!isAuthenticated) {
+    localStorage.removeItem('auth_token');
+    return <Navigate to="/login" replace />;
+  }
+
   return <>{children}</>;
 }
 

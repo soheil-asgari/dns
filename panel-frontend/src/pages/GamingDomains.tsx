@@ -1,12 +1,12 @@
 import { useQuery } from 'react-query';
 import { dnsApi } from '../services/api';
 import { Gamepad2 } from 'lucide-react';
-import { useAuth } from '../store/authStore';
+
+const token = () => localStorage.getItem('auth_token');
 
 export default function GamingDomains() {
-  const { isAuthenticated } = useAuth();
   const { data, isLoading } = useQuery('gamingDomains', () => dnsApi.getGamingDomains(), {
-    enabled: isAuthenticated,
+    enabled: !!token(),
   });
 
   if (isLoading) return <div className="text-slate-400">Loading...</div>;

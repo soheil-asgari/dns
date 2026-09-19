@@ -10,7 +10,8 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  if (isAuthenticated) {
+  const token = localStorage.getItem('auth_token');
+  if (token && isAuthenticated) {
     navigate('/panel', { replace: true });
     return null;
   }

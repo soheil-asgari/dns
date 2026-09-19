@@ -2,6 +2,8 @@ import { useQuery } from 'react-query';
 import { Globe, Gamepad2, Shield, Activity } from 'lucide-react';
 import { dnsApi } from '../services/api';
 
+const token = () => localStorage.getItem('auth_token');
+
 const statCards = [
   { label: 'Total Queries', value: '12,847', icon: Activity, change: '+12%', color: 'text-emerald-500' },
   { label: 'Gaming Domains', value: '10', icon: Gamepad2, change: 'Active', color: 'text-indigo-500' },
@@ -10,7 +12,10 @@ const statCards = [
 ];
 
 export default function Dashboard() {
-  const { data: domains } = useQuery('gamingDomains', () => dnsApi.getGamingDomains());
+  const { data: domains } = useQuery('gamingDomains', () => dnsApi.getGamingDomains(), {
+    enabled: !!token(),
+    retry: false,
+  });
 
   return (
     <div className="space-y-6">
