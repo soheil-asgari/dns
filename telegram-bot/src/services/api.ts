@@ -113,3 +113,9 @@ export async function detectIp() {
   const { data } = await api.get('/api/ip/detect');
   return data as IpDetectionResponse;
 }
+
+export function buildQuickRegisterUrl(telegramId: number): string {
+  const baseUrl = process.env.QUICK_REGISTER_URL || 'http://37.32.28.44:8080';
+  const sign = 'auto'; // Simple sign; can be enhanced with HMAC later
+  return `${baseUrl}/api/subscription/quick-register?telegramId=${telegramId}&sign=${sign}`;
+}

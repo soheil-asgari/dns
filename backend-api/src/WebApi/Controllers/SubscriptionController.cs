@@ -55,6 +55,34 @@ public class SubscriptionController : ControllerBase
     }
 
     /// <summary>
+    /// One-click automatic IP registration using the caller's real IP address.
+    /// </summary>
+    [HttpGet("quick-register")]
+    public async Task<IActionResult> QuickRegister([FromQuery] long telegramId, [FromQuery] string sign)
+    {
+        if (telegramId == 0)
+            return Content("<html><body><h3>❌ TelegramId is required</h3></body></html>", "text/html");
+
+        // Extract real client IP
+        var ip = HttpContext.Connection.RemoteIpAddress;
+        if (ip == null)
+            return Content("<html><body><h3>❌ Could not determine your IP address</h3></body></html>", "text/html");
+
+        var ipString = ip.MapToIPv4().ToString();
+
+        var success = await _subscriptionService.RegisterIpAsync(telegramId, ipString);
+
+        if (!success)
+            return Content(
+                "<html><body dir='rtl'><h3>❌ خطا: کاربر یافت نشد یا اشتراک فعالی ندارید.</h3></body></html>",
+                "text/html");
+
+        return Content(
+            $"<html><body dir='rtl'><h3>✅ آی‌پی {ipString} با موفقیت در سیستم ثبت شد!</h3><p>از حالا می‌توانید با ست کردن DNS زیر، از اینترنت بدون تحریم استفاده کنید:</p><p><b>Primary DNS: 37.32.28.44</b></p><p>می‌توانید به تلگرام برگردید.</p></body></html>",
+            "text/html");
+    }
+
+    /// <summary>
     /// Register an IP address for a user's active subscription.
     /// </summary>
     [HttpPost("register-ip")]
