@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/coredns/coredns/plugin"
+	"github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/coredns/coredns/request"
 	"github.com/go-redis/redis/v8"
 	"github.com/miekg/dns"
@@ -40,10 +42,23 @@ func New(redisAddr string, refreshInterval time.Duration) *GamingFilter {
 
 func (gf *GamingFilter) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	state := request.Request{W: w, Req: r}
-	qname := state.QName()
 
-	if gf.isGamingDomain(qname) {
-		return gf.modifyResponse(ctx, w, r)
+	// Normalize: strip trailing dot and lowercase
+	rawName := strings.ToLower(strings.TrimSuffix(state.QName(), "."))
+
+	if gf.isGamingDomain(rawName) {
+		log.Infof("[gaming_filter] Intercepted %s -> rewriting to %s", rawName, gf.proxyIP)
+
+		rr := new(dns.A)
+		rr.Hdr = dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 300}
+		rr.A = net.ParseIP(gf.proxyIP)
+
+		m := new(dns.Msg)
+		m.SetReply(r)
+		m.Authoritative = true
+		m.Answer = []dns.RR{rr}
+		state.W.WriteMsg(m)
+		return dns.RcodeSuccess, nil
 	}
 
 	return plugin.NextOrFailure(gf.Name(), gf.Next, ctx, w, r)
@@ -51,71 +66,28 @@ func (gf *GamingFilter) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 
 func (gf *GamingFilter) Name() string { return "gaming_filter" }
 
-func (gf *GamingFilter) isGamingDomain(domain string) bool {
+// isGamingDomain checks exact match or subdomain suffix match.
+// domains are expected to be stored without trailing dot.
+func (gf *GamingFilter) isGamingDomain(rawName string) bool {
 	gf.mu.RLock()
 	defer gf.mu.RUnlock()
-	_, ok := gf.gamingDomains[domain]
-	return ok
-}
 
-func (gf *GamingFilter) modifyResponse(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
-	state := request.Request{W: w, Req: r}
-
-	m := new(dns.Msg)
-	m.SetReply(r)
-	m.Authoritative = true
-
-	proxyIP := net.ParseIP(gf.proxyIP)
-	if proxyIP == nil {
-		return dns.RcodeServerFailure, nil
+	if gf.gamingDomains[rawName] {
+		return true
 	}
-
-	header := dns.RR_Header{
-		Name:   state.QName(),
-		Rrtype: state.QType(),
-		Class:  state.QClass(),
-		Ttl:    300,
-	}
-
-	var answer dns.RR
-	switch state.QType() {
-	case dns.TypeA:
-		answer = &dns.A{
-			Hdr: header,
-			A:   proxyIP,
-		}
-	case dns.TypeAAAA:
-		if proxyIP.To4() != nil {
-			answer = &dns.AAAA{
-				Hdr:  header,
-				AAAA: net.IPv6loopback,
-			}
-		} else {
-			answer = &dns.AAAA{
-				Hdr:  header,
-				AAAA: proxyIP,
-			}
-		}
-	default:
-		answer = &dns.A{
-			Hdr: header,
-			A:   proxyIP,
+	// Check subdomain: rawName ends with ".domain"
+	for d := range gf.gamingDomains {
+		if strings.HasSuffix(rawName, "."+d) {
+			return true
 		}
 	}
-
-	m.Answer = append(m.Answer, answer)
-
-	err := w.WriteMsg(m)
-	if err != nil {
-		return dns.RcodeServerFailure, err
-	}
-	return dns.RcodeSuccess, nil
+	return false
 }
 
 func (gf *GamingFilter) refreshDomains() {
 	ticker := time.NewTicker(gf.refreshInterval)
 	for range ticker.C {
-		val, err := gf.redisClient.Get(context.Background(), "gaming:domains").Result()
+		val, err := gf.redisClient.HGet(context.Background(), "DNSgaming:domains", "data").Result()
 		if err != nil {
 			continue
 		}
