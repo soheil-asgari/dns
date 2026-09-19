@@ -278,6 +278,7 @@ export async function setupCallbacks(bot: any) {
         if (result.success) {
           await ctx.reply(
             `✅ *آی‌پی ${result.registeredIp} با موفقیت در سیستم ثبت شد!*\n\n` +
+            `⚠️ آی‌پی قبلی شما غیرفعال و آی‌پی جدید جایگزین شد.\n\n` +
             `از حالا می‌توانید با ست کردن DNS زیر، از اینترنت بدون تحریم استفاده کنید:\n` +
             `Primary DNS: \`37.32.28.44\``,
             { parse_mode: 'Markdown', ...mainKeyboard }

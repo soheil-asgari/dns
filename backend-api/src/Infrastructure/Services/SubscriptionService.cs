@@ -5,6 +5,7 @@ using Domain.Entities;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 
 namespace Infrastructure.Services;
@@ -14,12 +15,14 @@ public class SubscriptionService : ISubscriptionService
     private readonly AppDbContext _context;
     private readonly IDistributedCache _cache;
     private readonly IDatabase _redis;
+    private readonly ILogger<SubscriptionService> _logger;
 
-    public SubscriptionService(AppDbContext context, IDistributedCache cache, IConnectionMultiplexer redis)
+    public SubscriptionService(AppDbContext context, IDistributedCache cache, IConnectionMultiplexer redis, ILogger<SubscriptionService> logger)
     {
         _context = context;
         _cache = cache;
         _redis = redis.GetDatabase();
+        _logger = logger;
     }
 
     public async Task<UserDto> GetOrCreateUserAsync(long telegramId, string? username, string? firstName)
@@ -147,6 +150,19 @@ public class SubscriptionService : ISubscriptionService
             .FirstOrDefault();
 
         if (activeSub == null) return false;
+
+        // Enforce single active IP: evict previous IP before registering new one
+        var oldIp = activeSub.RegisteredIp;
+        if (!string.IsNullOrWhiteSpace(oldIp) && !string.Equals(oldIp, ipAddress, StringComparison.OrdinalIgnoreCase))
+        {
+            // 1. Delete old IP key from Redis
+            await _redis.KeyDeleteAsync($"allowed_ips:{oldIp}");
+
+            // 2. Remove old IP from whitelist:ips set
+            await _redis.SetRemoveAsync("whitelist:ips", oldIp);
+
+            _logger.LogInformation("Evicted previous IP '{OldIp}' for user {UserId} / TelegramId {TelegramId}", oldIp, user.Id, telegramId);
+        }
 
         // Update RegisteredIp in SQL
         activeSub.RegisteredIp = ipAddress;
