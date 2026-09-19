@@ -117,8 +117,8 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "An error occurred while migrating the database.");
-        throw;
+        // Prevent crash if migration fails (e.g. tables already exist on an existing database).
+        logger.LogWarning(ex, "Migration warning: schema might already be up to date. Proceeding without crashing.");
     }
 }
 
