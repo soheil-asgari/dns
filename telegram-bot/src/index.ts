@@ -7,20 +7,20 @@ import { dnsHandler } from './commands/dns.js';
 import { listHandler } from './commands/list.js';
 import { adminHandler } from './commands/admin.js';
 import { fetchBotToken } from './services/api.js';
+import { publishLatestGamingNews } from './modules/channelPublisher';
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 
 let bot: Telegraf | null = null;
 let running = false;
+let generalRedis: any = null; // کلاینت ردیس برای کارهای معمولی مثل بررسی خبرهای تکراری
 
 async function getBotToken(): Promise<string | null> {
-  // First try environment variable
   let token = process.env.BOT_TOKEN;
   if (token && token !== 'your_telegram_bot_token_here' && token !== '') {
     return token;
   }
 
-  // Fall back to backend API
   try {
     logger.info('BOT_TOKEN not in env, fetching from backend API...');
     const result = await fetchBotToken();
@@ -82,20 +82,44 @@ async function startBot(token: string) {
   bot.command('list', listHandler);
   bot.command('admin', adminHandler);
 
-  // Setup callback query handlers (subscription flow)
+  // دستور تست دستی ارسال خبر به کانال
+  bot.command('postnews', async (ctx) => {
+    try {
+      await ctx.reply('⏳ در حال دریافت آخرین اخبار گیمینگ و بازنویسی با مدل هوش مصنوعی...');
+      await publishLatestGamingNews(bot!, generalRedis);
+      await ctx.reply('✅ خبر جدید با موفقیت به کانال ارسال شد.');
+    } catch (err: any) {
+      logger.error({ err }, 'Failed to publish news via /postnews');
+      await ctx.reply(`❌ خطا در پردازش یا ارسال: ${err?.message || err}`);
+    }
+  });
+
+  // Setup callback query handlers
   setupCallbacks(bot);
 
-  // Start bot with graceful error handling for invalid tokens
+  // Start bot
   try {
     await bot.launch();
     logger.info('Bot started');
     running = true;
+
+    // ارسال خودکار اخبار به کانال (اجرای اول بعد از ۲ دقیقه، سپس هر ۳ ساعت یک‌بار)
+    setTimeout(() => {
+      if (bot && running) {
+        publishLatestGamingNews(bot, generalRedis);
+      }
+    }, 2 * 60 * 1000);
+
+    setInterval(() => {
+      if (bot && running) {
+        publishLatestGamingNews(bot, generalRedis);
+      }
+    }, 3 * 60 * 60 * 1000);
+
   } catch (err: unknown) {
     const errMsg = err instanceof Error ? err.message : String(err);
     if (errMsg.includes('404') || errMsg.includes('Not Found') || errMsg.includes('not found')) {
-      logger.warn(
-        'Provided bot token is invalid or not found on Telegram servers. Waiting for a valid token via Settings or Redis...'
-      );
+      logger.warn('Provided bot token is invalid. Waiting for a valid token...');
     } else {
       logger.error({ err: errMsg }, 'Failed to launch bot');
     }
@@ -112,11 +136,22 @@ function setupProcessHandlers(botInstance: Telegraf | null) {
 }
 
 async function init() {
+  // ساخت کلاینت عمومی ردیس برای بررسی تکراری نبودن اخبار
+  try {
+    const redisModule: any = await import('redis');
+    const redisUrl = process.env.REDIS_URL || 'redis://redis:6379';
+    generalRedis = redisModule.createClient(redisUrl);
+    generalRedis.on('error', (err: any) => {
+      logger.warn({ err: err?.message || err }, 'General Redis client error');
+    });
+  } catch (err) {
+    logger.warn({ err }, 'Failed to create general Redis client');
+  }
+
   const token = await getBotToken();
 
   if (!token) {
     logger.warn('No bot token available. Bot will wait and retry periodically...');
-    // Retry fetching token every 30 seconds until available
     const retryInterval = setInterval(async () => {
       const newToken = await getBotToken();
       if (newToken) {
@@ -135,8 +170,7 @@ async function init() {
   try {
     const { createClient } = await import('redis');
     const redisUrl = process.env.REDIS_URL || 'redis://redis:6379';
-    const subscriber: any = createClient({ url: redisUrl });
-    // redis v2 connects automatically; no .connect() call needed (avoids "subscriber.connect is not a function")
+    const subscriber: any = createClient(redisUrl);
     await subscriber.subscribe('config:bot_token_changed', (message: string) => {
       if (!message) return;
       if (!isTokenFormatValid(message)) {
@@ -155,15 +189,12 @@ async function init() {
   try {
     const redisModule: any = await import('redis');
     const redisUrl = process.env.REDIS_URL || 'redis://redis:6379';
-
-    // در ردیس ۲.۸ رشته آدرس مستقیماً پاس داده می‌شود
     const paymentSub: any = redisModule.createClient(redisUrl);
 
     paymentSub.on('error', (err: any) => {
       logger.warn({ err: err?.message || err }, 'Redis subscriber error');
     });
 
-    // در ردیس ۲.۸ دریافت پیام با اونت message است
     paymentSub.on('message', async (channel: string, message: string) => {
       if (channel !== 'payment:notify' || !message || !bot) return;
 
@@ -172,7 +203,6 @@ async function init() {
         const chatId = payload.telegramId;
         if (!chatId) return;
 
-        // Rate-limit safety
         await new Promise(r => setTimeout(r, 50));
 
         switch (payload.type) {
@@ -254,6 +284,7 @@ async function init() {
     logger.warn({ err: errMsg }, 'Notification subscriber failed (non-critical)');
   }
 }
+
 // Health endpoint for HAProxy
 import http from 'http';
 const server = http.createServer((req, res) => {
