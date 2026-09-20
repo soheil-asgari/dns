@@ -68,11 +68,8 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<IDnsService, DnsService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 
-// ZarinPal payment gateway
-builder.Services.AddHttpClient<ZarinPalPaymentService>(client =>
-{
-    client.Timeout = TimeSpan.FromSeconds(30);
-});
+// ZarinPal payment gateway (creates its own HttpClient with WAF-friendly TLS config)
+builder.Services.AddScoped<ZarinPalPaymentService>();
 
 // Certificate Transparency (crt.sh) for subdomain discovery
 builder.Services.AddHttpClient("crtSh", client =>
