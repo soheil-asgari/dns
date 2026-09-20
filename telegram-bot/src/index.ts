@@ -153,18 +153,26 @@ async function init() {
 
   // Subscribe to notifications (payment, ip registration, expiry reminder)
   try {
-    const { createClient } = await import('redis');
+    const redisModule: any = await import('redis');
     const redisUrl = process.env.REDIS_URL || 'redis://redis:6379';
-    const paymentSub: any = createClient({ url: redisUrl });
-    await paymentSub.connect();
-    await paymentSub.subscribe('payment:notify', async (message: string) => {
-      if (!message || !bot) return;
+
+    // در ردیس ۲.۸ رشته آدرس مستقیماً پاس داده می‌شود
+    const paymentSub: any = redisModule.createClient(redisUrl);
+
+    paymentSub.on('error', (err: any) => {
+      logger.warn({ err: err?.message || err }, 'Redis subscriber error');
+    });
+
+    // در ردیس ۲.۸ دریافت پیام با اونت message است
+    paymentSub.on('message', async (channel: string, message: string) => {
+      if (channel !== 'payment:notify' || !message || !bot) return;
+
       try {
         const payload = JSON.parse(message);
         const chatId = payload.telegramId;
         if (!chatId) return;
 
-        // Rate-limit safety: add a small delay between messages
+        // Rate-limit safety
         await new Promise(r => setTimeout(r, 50));
 
         switch (payload.type) {
@@ -239,12 +247,13 @@ async function init() {
         logger.warn({ err: e }, 'Failed to process notification');
       }
     });
+
+    paymentSub.subscribe('payment:notify');
   } catch (err: unknown) {
     const errMsg = err instanceof Error ? err.message : String(err);
     logger.warn({ err: errMsg }, 'Notification subscriber failed (non-critical)');
   }
 }
-
 // Health endpoint for HAProxy
 import http from 'http';
 const server = http.createServer((req, res) => {
