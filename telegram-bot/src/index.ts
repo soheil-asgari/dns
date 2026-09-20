@@ -156,6 +156,7 @@ async function init() {
     const { createClient } = await import('redis');
     const redisUrl = process.env.REDIS_URL || 'redis://redis:6379';
     const paymentSub: any = createClient({ url: redisUrl });
+    await paymentSub.connect();
     await paymentSub.subscribe('payment:notify', async (message: string) => {
       if (!message || !bot) return;
       try {
