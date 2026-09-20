@@ -3,32 +3,29 @@
     health
     prometheus :9153
     
-    # Log all queries
-    log
+    # فقط ارورها لاگ شوند تا پینگ دچار اسپایک نشود
     errors
     
-    # Gaming-specific plugin (custom) — must come before forward per plugin.cfg
+    # پلاگین اختصاصی گیمینگ با رفرش ۵ ثانیه‌ای ردیس
     gaming_filter {
         redis_addr redis:6379
         refresh_interval 5s
         proxy_ip 37.32.28.44
     }
     
-    # Handle ANY queries locally (RFC 8482)
+    # پاسخ سریع به کوئری‌های ANY
     any
     
-    # Cache responses — low TTL so new Redis entries are picked up within seconds
+    # کش بهینه با ترتیب صحیح پارامترها
     cache 5 {
         success 5
         denial 5
-        prefetch 5 30% 10m
+        prefetch 5 10m 30%
     }
     
-    # Forward to upstream DNS for non-gaming domains
-    forward . 8.8.8.8 1.1.1.1 9.9.9.9 {
+    # فوروارد بدون هلت‌چک ناپایدار همراه با DNS پشتیبان داخلی
+    forward . 8.8.8.8 1.1.1.1 10.202.10.202 {
         max_concurrent 2000
-        health_check 5s
-        policy sequential
         expire 15m
     }
 }

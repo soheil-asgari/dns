@@ -59,12 +59,11 @@ public class ZarinPalPaymentService
         long amountTomans, string description, string callbackUrl,
         string? mobile = null, string? email = null)
     {
-        var amountRials = amountTomans * 10; // Convert Tomans to Rials.
-
+        // Plan.Price is stored in Tomans and Currency=IRT expects Tomans — pass directly.
         var requestBody = new ZarinPalPaymentRequest
         {
             MerchantId = _merchantId,
-            Amount = amountRials,
+            Amount = amountTomans,
             Currency = "IRT",
             Description = description,
             CallbackUrl = callbackUrl,
@@ -73,7 +72,7 @@ public class ZarinPalPaymentService
                 : new ZarinPalPaymentMetadata { Mobile = mobile, Email = email }
         };
 
-        _logger.LogInformation("ZarinPal request: Amount={Amount} Rials, Desc={Desc}", amountRials, description);
+        _logger.LogInformation("ZarinPal request: Amount={Amount} Tomans (IRT), Desc={Desc}", amountTomans, description);
 
         var (json, url) = await PostWithFallbackAsync<ZarinPalRequestResponse>(requestBody, PrimaryRequestUrl, FallbackRequestUrl);
 
@@ -97,7 +96,7 @@ public class ZarinPalPaymentService
         var requestBody = new ZarinPalVerifyRequest
         {
             MerchantId = _merchantId,
-            Amount = amountTomans * 10,
+            Amount = amountTomans, // Must match the requested amount (Tomans with IRT)
             Authority = authority
         };
 
