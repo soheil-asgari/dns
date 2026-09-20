@@ -7,7 +7,7 @@ import { dnsHandler } from './commands/dns.js';
 import { listHandler } from './commands/list.js';
 import { adminHandler } from './commands/admin.js';
 import { fetchBotToken } from './services/api.js';
-import { publishLatestGamingNews } from './modules/channelPublisher';
+import { publishLatestGamingNews } from './modules/channelPublisher.js';
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 

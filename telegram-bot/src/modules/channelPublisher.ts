@@ -1,6 +1,6 @@
 import Parser from 'rss-parser';
 import { Telegraf } from 'telegraf';
-import { rewriteGamingNews } from '../services/aiWriter';
+import { rewriteGamingNews } from '../services/aiWriter.js';
 
 const parser = new Parser({
     customFields: {
