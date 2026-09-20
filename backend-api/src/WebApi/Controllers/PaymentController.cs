@@ -226,6 +226,7 @@ public class PaymentController : ControllerBase
             // Extend existing subscription
             subscription.EndDate = subscription.EndDate.AddDays(plan.DurationDays);
             subscription.IsActive = true;
+            subscription.ExpiryReminderSent = false; // reset on renewal
             newSub = subscription;
         }
         else
@@ -238,7 +239,8 @@ public class PaymentController : ControllerBase
                 Type = SubscriptionType.PaidMonthly,
                 StartDate = DateTime.UtcNow,
                 EndDate = DateTime.UtcNow.AddDays(plan.DurationDays),
-                IsActive = true
+                IsActive = true,
+                ExpiryReminderSent = false
             };
             _context.Subscriptions.Add(newSub);
         }

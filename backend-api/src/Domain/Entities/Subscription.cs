@@ -16,6 +16,7 @@ public class Subscription
     public DateTime StartDate { get; set; } = DateTime.UtcNow;
     public DateTime EndDate { get; set; }
     public bool IsActive { get; set; } = true;
+    public bool ExpiryReminderSent { get; set; } = false;
     public string? RegisteredIp { get; set; }
 
     public User User { get; set; } = null!;

@@ -227,6 +227,76 @@ async function handlePersistentKeyboard(ctx: Context, text: string, telegramId: 
 
 // Handle callback queries
 export async function setupCallbacks(bot: any) {
+  // New inline button handlers for notifications
+  bot.action('register_ip', async (ctx: any) => {
+    await ctx.answerCbQuery();
+    const telegramId = ctx.from?.id;
+    if (!telegramId) return;
+    const quickRegisterUrl = buildQuickRegisterUrl(telegramId);
+    await ctx.reply(
+      '⚡️ *ثبت خودکار آی‌پی*\n\n' +
+      'روی لینک زیر کلیک کنید تا آی‌پی شما به صورت آنی شناسایی و فعال شود:\n\n' +
+      `👉 [ثبت و فعال‌سازی آی‌پی من](${quickRegisterUrl})\n\n` +
+      '_همچنین می‌توانید آی‌پی اینترنت خود را به صورت دستی در چت بفرستید._',
+      {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "🚀 ثبت و اتصال خودکار آی‌پی", url: quickRegisterUrl }]
+          ]
+        }
+      }
+    );
+  });
+
+  bot.action('guide_connection', async (ctx: any) => {
+    await ctx.answerCbQuery();
+    await ctx.reply(
+      '⚙️ *راهنمای تنظیم DNS*\n\n' +
+      'برای استفاده از سرویس، DNS سرور خود را به آدرس زیر تغییر دهید:\n\n' +
+      '`37.32.28.44`\n\n' +
+      '*آموزش تنظیم در سیستم‌عامل‌های مختلف:*\n\n' +
+      '1️⃣ *ویندوز:*\n' +
+      '   - تنظیمات شبکه ← اینترنت → تغییر تنظیمات آداپتور\n' +
+      '   - روی اتصال خود کلیک راست → Properties\n' +
+      '   - Internet Protocol Version 4 (TCP/IPv4) → Properties\n' +
+      '   - Use the following DNS server addresses\n' +
+      '   - DNS: `37.32.28.44`\n\n' +
+      '2️⃣ *اندروید:*\n' +
+      '   - Settings → Wi-Fi → شبکه فعلی\n' +
+      '   - Modify network → Advanced → IP settings → Static\n' +
+      '   - DNS: `37.32.28.44`\n\n' +
+      '3️⃣ *iOS:*\n' +
+      '   - Settings → Wi-Fi → شبکه فعلی\n' +
+      '   - Configure DNS → Manual\n' +
+      '   - DNS: `37.32.28.44`\n\n' +
+      '4️⃣ *لینوکس / مک:*\n' +
+      '   - تنظیمات شبکه → DNS\n' +
+      '   - افزودن `37.32.28.44`',
+      { parse_mode: 'Markdown' }
+    );
+  });
+
+  bot.action('renew_subscription', async (ctx: any) => {
+    await ctx.answerCbQuery();
+    const plans = await getPlans();
+    if (!plans || plans.length === 0) {
+      await ctx.reply('❌ هیچ پلن فعالی یافت نشد.');
+      return;
+    }
+    const inlineButtons = plans.map(p => [
+      { text: `📦 ${p.title}`, callback_data: `select_plan_${p.id}` }
+    ]);
+    await ctx.reply(
+      '💳 *تمدید اشتراک*\n\n' +
+      'لطفاً پلن مورد نظر خود را انتخاب کنید:',
+      {
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard: inlineButtons }
+      }
+    );
+  });
+
   bot.action('manual_ip', async (ctx: any) => {
     await ctx.answerCbQuery();
     await ctx.reply(

@@ -151,7 +151,7 @@ async function init() {
     logger.warn({ err: errMsg }, 'Redis pub/sub subscription failed (non-critical)');
   }
 
-  // Subscribe to payment notifications
+  // Subscribe to notifications (payment, ip registration, expiry reminder)
   try {
     const { createClient } = await import('redis');
     const redisUrl = process.env.REDIS_URL || 'redis://redis:6379';
@@ -160,26 +160,87 @@ async function init() {
       if (!message || !bot) return;
       try {
         const payload = JSON.parse(message);
-        if (payload.type === 'payment_success' && payload.telegramId) {
-          const endDate = new Date(payload.endDate).toLocaleDateString('fa-IR') + ' ' + new Date(payload.endDate).toLocaleTimeString('fa-IR');
-          await bot.telegram.sendMessage(
-            payload.telegramId,
-            `✅ *پرداخت شما با موفقیت انجام شد!*\n\n` +
-            `🧾 کد پیگیری: \`${payload.refId}\`\n` +
-            `📦 پلن: ${payload.planTitle}\n` +
-            `💰 مبلغ: ${payload.amount.toLocaleString('fa-IR')} تومان\n` +
-            `📅 اشتراک شما تا تاریخ *${endDate}* تمدید گردید.\n\n` +
-            `⚡️ لطفاً آی‌پی اینترنت خود را مجدداً ثبت کنید.`,
-            { parse_mode: 'Markdown' }
-          );
+        const chatId = payload.telegramId;
+        if (!chatId) return;
+
+        // Rate-limit safety: add a small delay between messages
+        await new Promise(r => setTimeout(r, 50));
+
+        switch (payload.type) {
+          case 'payment_success': {
+            const planName = payload.planTitle || 'نامشخص';
+            const refId = payload.refId || '—';
+            const amount = (payload.amount || 0).toLocaleString('fa-IR');
+            const endDate = new Date(payload.endDate);
+            const expiryShamsi = endDate.toLocaleDateString('fa-IR') + ' ' + endDate.toLocaleTimeString('fa-IR');
+
+            await bot.telegram.sendMessage(
+              chatId,
+              `✅ *پرداخت شما با موفقیت انجام شد*\n\n` +
+              `📦 پلن خریداری‌شده: ${planName}\n` +
+              `💳 شماره پیگیری: \`${refId}\`\n` +
+              `💰 مبلغ: ${amount} تومان\n` +
+              `📅 تاریخ پایان اشتراک: ${expiryShamsi}\n\n` +
+              `اکنون می‌توانید از طریق منوی ربات، آی‌پی دستگاه خود را ثبت و از سرویس استفاده کنید.`,
+              {
+                parse_mode: 'Markdown',
+                reply_markup: {
+                  inline_keyboard: [
+                    [{ text: '🎮 ثبت آی‌پی دستگاه', callback_data: 'register_ip' }],
+                    [{ text: '📖 راهنمای اتصال', callback_data: 'guide_connection' }],
+                  ]
+                }
+              }
+            );
+            break;
+          }
+
+          case 'ip_registered': {
+            const userIp = payload.ipAddress || '—';
+            await bot.telegram.sendMessage(
+              chatId,
+              `🎮 *آی‌پی شما با موفقیت در سامانه ثبت شد!*\n\n` +
+              `🌐 آی‌پی ثبت‌شده: \`${userIp}\`\n\n` +
+              `تنظیمات DNS را به صورت زیر روی کنسول یا سیستم خود قرار دهید:\n` +
+              `🔹 Primary DNS: \`37.32.28.44\`\n` +
+              `🔸 Secondary DNS: \`37.32.30.252\`\n\n` +
+              `💡 *نکته:* پس از ست کردن DNS، سیستم یا کنسول خود را یک‌بار ریستارت کنید.`,
+              { parse_mode: 'Markdown' }
+            );
+            break;
+          }
+
+          case 'expiry_reminder': {
+            const expiryDate = new Date(payload.endDate);
+            const expiryShamsi = expiryDate.toLocaleDateString('fa-IR') + ' ' + expiryDate.toLocaleTimeString('fa-IR');
+            await bot.telegram.sendMessage(
+              chatId,
+              `⚠️ *یادآوری پایان اشتراک*\n\n` +
+              `کاربر گرامی، تنها ۳ روز از اعتبار اشتراک سرویس گیمینگ شما باقی مانده است.\n` +
+              `📅 تاریخ انقضا: ${expiryShamsi}\n\n` +
+              `برای جلوگیری از قطعی سرویس در هنگام بازی، اشتراک خود را تمدید فرمایید.`,
+              {
+                parse_mode: 'Markdown',
+                reply_markup: {
+                  inline_keyboard: [
+                    [{ text: '💳 تمدید اشتراک', callback_data: 'renew_subscription' }],
+                  ]
+                }
+              }
+            );
+            break;
+          }
+
+          default:
+            logger.warn({ type: payload.type }, 'Unknown notification type, ignoring');
         }
       } catch (e) {
-        logger.warn({ err: e }, 'Failed to process payment notification');
+        logger.warn({ err: e }, 'Failed to process notification');
       }
     });
   } catch (err: unknown) {
     const errMsg = err instanceof Error ? err.message : String(err);
-    logger.warn({ err: errMsg }, 'Payment notification subscriber failed (non-critical)');
+    logger.warn({ err: errMsg }, 'Notification subscriber failed (non-critical)');
   }
 }
 

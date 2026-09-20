@@ -68,6 +68,9 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<IDnsService, DnsService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 
+// Background workers
+builder.Services.AddHostedService<Infrastructure.BackgroundServices.SubscriptionExpiryNotifierWorker>();
+
 // ZarinPal payment gateway (creates its own HttpClient with WAF-friendly TLS config)
 builder.Services.AddScoped<ZarinPalPaymentService>();
 

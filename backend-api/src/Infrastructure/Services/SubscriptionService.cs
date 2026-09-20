@@ -186,6 +186,24 @@ public class SubscriptionService : ISubscriptionService
             await _redis.KeyExpireAsync("whitelist:ips", TimeSpan.FromSeconds(Math.Max(remainingSeconds, 60)));
         }
 
+        // Publish IP registration notification via Redis pub/sub
+        try
+        {
+            var notifyPayload = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                telegramId = telegramId,
+                ipAddress = ipAddress,
+                type = "ip_registered"
+            });
+            var subscriber = _redis.Multiplexer.GetSubscriber();
+            await subscriber.PublishAsync(RedisChannel.Literal("payment:notify"), notifyPayload);
+            _logger.LogInformation("IP registration notification published for TelegramId {TelegramId}", telegramId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to publish IP registration notification for TelegramId {TelegramId}", telegramId);
+        }
+
         return true;
     }
 
