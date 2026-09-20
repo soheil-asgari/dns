@@ -7,7 +7,7 @@ import { dnsHandler } from './commands/dns.js';
 import { listHandler } from './commands/list.js';
 import { adminHandler } from './commands/admin.js';
 import { fetchBotToken } from './services/api.js';
-import { publishLatestGamingNews } from './modules/channelPublisher.js';
+import { publishLatestGamingNews, publishDnsPromo } from './modules/channelPublisher.js';
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 
@@ -91,6 +91,16 @@ async function startBot(token: string) {
     } catch (err: any) {
       logger.error({ err }, 'Failed to publish news via /postnews');
       await ctx.reply(`❌ خطا در پردازش یا ارسال: ${err?.message || err}`);
+    }
+  });
+  bot.command('postdns', async (ctx) => {
+    try {
+      await ctx.reply('⏳ در حال تولید پست اختصاصی دی‌ان‌اس با هوش مصنوعی و ارسال به کانال...');
+      await publishDnsPromo(bot!);
+      await ctx.reply('✅ پست اختصاصی دی‌ان‌اس با موفقیت در کانال منتشر شد!');
+    } catch (err: any) {
+      logger.error({ err }, 'Failed to publish DNS promo via /postdns');
+      await ctx.reply(`❌ خطا در ارسال پست دی‌ان‌اس: ${err?.message || err}`);
     }
   });
 

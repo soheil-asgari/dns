@@ -1,6 +1,7 @@
 import Parser from 'rss-parser';
 import { Telegraf } from 'telegraf';
-import { rewriteGamingNews } from '../services/aiWriter.js';
+
+import { rewriteGamingNews, generateDnsPromoCopy } from '../services/aiWriter.js';
 
 const parser = new Parser({
     customFields: {
@@ -135,4 +136,46 @@ function markAsPosted(redis: any, url: string): Promise<void> {
             resolve();
         });
     });
+}
+
+
+
+
+// پوسترهای باکیف متناسب با هر موضوع
+const TOPIC_IMAGES: Record<string, string> = {
+    warzone: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1200&auto=format&fit=crop',
+    fc25: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1200&auto=format&fit=crop',
+    valorant: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=1200&auto=format&fit=crop',
+    quick_register: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1200&auto=format&fit=crop',
+    free_trial: 'https://images.unsplash.com/photo-1612287271162-26466986503d?q=80&w=1200&auto=format&fit=crop',
+};
+
+export async function publishDnsPromo(bot: Telegraf<any>) {
+    const channelId = process.env.CHANNEL_ID;
+    const botUsername = process.env.BOT_USERNAME || 'rhynodnsbot';
+
+    if (!channelId) {
+        throw new Error('CHANNEL_ID is not configured.');
+    }
+
+    const promo = await generateDnsPromoCopy();
+    const imageUrl = TOPIC_IMAGES[promo.topic] || TOPIC_IMAGES['warzone'];
+
+    const inlineKeyboard = [
+        [
+            { text: '🎁 فعال‌سازی ۲۴ ساعت تست رایگان', url: `https://t.me/${botUsername.replace('@', '')}?start=promo` },
+        ],
+        [
+            { text: '⚡ ثبت سریع آی‌پی (بدون رمز)', url: `https://t.me/${botUsername.replace('@', '')}?start=register_ip` },
+            { text: '📖 آموزش تنظیم در کنسول', url: `https://t.me/${botUsername.replace('@', '')}?start=guide` },
+        ],
+    ];
+
+    await bot.telegram.sendPhoto(channelId, imageUrl, {
+        caption: promo.text,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard: inlineKeyboard },
+    });
+
+    console.log(`[ChannelPublisher] Successfully published DNS Promo for topic: ${promo.topic}`);
 }
