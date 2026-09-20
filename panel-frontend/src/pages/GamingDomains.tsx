@@ -73,8 +73,13 @@ export default function GamingDomains() {
 
     setIsAdding(true);
     try {
+      // Always include the base domain alongside selected subdomains
+      const baseDomain = discoveryResult.domain;
       const selected = Array.from(selectedSubdomains);
-      await dnsApi.bulkCreateGamingDomains(selected, discoveryResult.domain);
+      if (!selected.includes(baseDomain)) {
+        selected.push(baseDomain);
+      }
+      await dnsApi.bulkCreateGamingDomains(selected, baseDomain);
 
       // Refresh the gaming domains list
       queryClient.invalidateQueries('gamingDomains');

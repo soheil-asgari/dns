@@ -53,7 +53,7 @@ public class DnsService : IDnsService
         }
 
         // Auto-sync to Redis after bulk insert
-        await SyncDnsToRedisAsync();
+        await SyncToRedisAsync();
     }
 
     public async Task<DnsResolutionResult> ResolveDomainAsync(string domain)
