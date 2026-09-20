@@ -195,10 +195,10 @@ public class PaymentController : ControllerBase
             return Content(FailureHtml(), "text/html; charset=utf-8");
         }
 
-        // Verify with ZarinPal
-        var refId = await _zarinPal.VerifyPaymentAsync(authority, transaction.Amount);
+        // Verify with ZarinPal v4
+        var verifyResult = await _zarinPal.VerifyPaymentAsync(authority, transaction.Amount);
 
-        if (refId == null)
+        if (verifyResult == null)
         {
             transaction.Status = PaymentStatus.Failed;
             await _context.SaveChangesAsync();
@@ -207,7 +207,7 @@ public class PaymentController : ControllerBase
 
         // Success: update transaction
         transaction.Status = PaymentStatus.Success;
-        transaction.RefId = refId;
+        transaction.RefId = verifyResult.RefId;
         transaction.VerifiedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
@@ -264,7 +264,7 @@ public class PaymentController : ControllerBase
             var notifyPayload = JsonSerializer.Serialize(new
             {
                 telegramId = transaction.TelegramId,
-                refId = refId,
+                refId = verifyResult.RefId,
                 amount = transaction.Amount,
                 planTitle = plan.Title,
                 endDate = newSub.EndDate,
@@ -278,7 +278,7 @@ public class PaymentController : ControllerBase
             _logger.LogWarning(ex, "Failed to publish payment notification to Redis");
         }
 
-        return Content(SuccessHtml(refId!.Value, newSub.EndDate), "text/html; charset=utf-8");
+        return Content(SuccessHtml(verifyResult.RefId, newSub.EndDate), "text/html; charset=utf-8");
     }
 
     private static string SuccessHtml(long refId, DateTime endDate)
