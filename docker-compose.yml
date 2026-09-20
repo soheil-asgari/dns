@@ -39,6 +39,7 @@ services:
       - "8404:8404" # Stats
     volumes:
       - ./proxy-server/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - haproxy_shared:/usr/local/etc/haproxy:rw
     depends_on:
       - backend-api
       - panel-frontend
@@ -64,6 +65,8 @@ services:
       ConnectionStrings__Redis: "redis:6379"
     ports:
       - "8080:8080"
+    volumes:
+      - haproxy_shared:/usr/local/etc/haproxy:rw
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -166,3 +169,5 @@ networks:
 volumes:
   redis-data:
   sqlserver-data:
+  haproxy_shared:
+    driver: local

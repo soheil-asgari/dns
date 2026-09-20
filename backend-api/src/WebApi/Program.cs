@@ -29,7 +29,31 @@ builder.Services.AddStackExchangeRedisCache(options =>
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 {
     var config = builder.Configuration.GetConnectionString("Redis") ?? "redis:6379";
-    return ConnectionMultiplexer.Connect(config);
+    var options = ConfigurationOptions.Parse(config);
+    // Enable keyspace notifications for set events and key expiry
+    // so HaproxyAclSyncService can react to whitelist changes in real time.
+    options.DefaultDatabase = 0;
+    var muxer = ConnectionMultiplexer.Connect(options);
+
+    // Enable keyspace notifications on the server:
+    //   K  = keyspace events
+    //   E  = keyevent events
+    //   g  = generic commands (del, expire, etc.)
+    //   s  = set commands (sadd, srem)
+    //   x  = expired events
+    // => "KEgsx" covers sadd/srem/del/expired on whitelist:ips
+    try
+    {
+        var server = muxer.GetServer(muxer.GetEndPoints().First());
+        server.ConfigSet("notify-keyspace-events", "KEgsx");
+    }
+    catch (Exception ex)
+    {
+        var logger = sp.GetRequiredService<ILogger<Program>>();
+        logger.LogWarning(ex, "Failed to enable Redis keyspace notifications. Real-time ACL sync will be degraded; periodic reconciliation still active.");
+    }
+
+    return muxer;
 });
 
 // JWT Authentication
@@ -70,6 +94,7 @@ builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 
 // Background workers
 builder.Services.AddHostedService<Infrastructure.BackgroundServices.SubscriptionExpiryNotifierWorker>();
+builder.Services.AddHostedService<Infrastructure.BackgroundServices.HaproxyAclSyncService>();
 
 // ZarinPal payment gateway (creates its own HttpClient with WAF-friendly TLS config)
 builder.Services.AddScoped<ZarinPalPaymentService>();

@@ -28,6 +28,7 @@ services:
     volumes:
       - ./proxy-server/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
       - /etc/ssl/certs:/etc/ssl/certs:ro
+      - haproxy_shared:/usr/local/etc/haproxy:rw
     deploy:
       replicas: 2
       resources:
@@ -47,3 +48,5 @@ services:
 
 volumes:
   redis-data:
+  haproxy_shared:
+    driver: local

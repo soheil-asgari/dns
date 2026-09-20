@@ -14,5 +14,10 @@ RUN dotnet publish "src/WebApi/WebApi.csproj" -c Release -o /app
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 EXPOSE 8080
+
+# Create the haproxy shared directory so the docker volume mount works
+# and the HaproxyAclSyncService can write the ACL file and access the socket.
+RUN mkdir -p /usr/local/etc/haproxy
+
 COPY --from=build /app .
 ENTRYPOINT ["dotnet", "WebApi.dll"]

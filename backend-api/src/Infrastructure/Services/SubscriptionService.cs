@@ -162,6 +162,17 @@ public class SubscriptionService : ISubscriptionService
             await _redis.SetRemoveAsync("whitelist:ips", oldIp);
 
             _logger.LogInformation("Evicted previous IP '{OldIp}' for user {UserId} / TelegramId {TelegramId}", oldIp, user.Id, telegramId);
+
+            // Signal HAProxy sync service to remove the old IP from the ACL immediately
+            try
+            {
+                var subscriber = _redis.Multiplexer.GetSubscriber();
+                await subscriber.PublishAsync(RedisChannel.Literal("acl:sync"), "reload");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to publish ACL sync signal for old IP eviction");
+            }
         }
 
         // Update RegisteredIp in SQL
@@ -202,6 +213,18 @@ public class SubscriptionService : ISubscriptionService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to publish IP registration notification for TelegramId {TelegramId}", telegramId);
+        }
+
+        // Publish ACL update signal so HaproxyAclSyncService reacts immediately
+        // instead of waiting for the next 60s reconciliation cycle.
+        try
+        {
+            var subscriber = _redis.Multiplexer.GetSubscriber();
+            await subscriber.PublishAsync(RedisChannel.Literal("acl:sync"), "reload");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to publish ACL sync signal for IP {IpAddress}", ipAddress);
         }
 
         return true;
