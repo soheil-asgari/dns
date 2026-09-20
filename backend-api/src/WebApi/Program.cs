@@ -129,4 +129,21 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+// Warm up DNS Redis cache on startup
+using (var scope = app.Services.CreateScope())
+{
+    var dnsService = scope.ServiceProvider.GetRequiredService<IDnsService>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    try
+    {
+        logger.LogInformation("Warming up DNS Redis cache on startup...");
+        await dnsService.SyncToRedisAsync();
+        logger.LogInformation("DNS Redis cache successfully warmed up.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to warm up DNS Redis cache on startup.");
+    }
+}
+
 await app.RunAsync();

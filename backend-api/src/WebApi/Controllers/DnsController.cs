@@ -43,6 +43,7 @@ public class DnsController : ControllerBase
         return Ok(new { message = $"Added {request.Domains.Count} gaming domains and synced to Redis." });
     }
 
+    [AllowAnonymous]
     [HttpPost("sync-redis")]
     public async Task<IActionResult> SyncToRedis()
     {
