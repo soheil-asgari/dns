@@ -121,7 +121,7 @@ public class SubscriptionController : ControllerBase
             ip = clientIp,
             remainingHours = remainingTime.TotalHours,
             primaryDns = "37.32.28.44",
-            secondaryDns = "1.1.1.1"
+            secondaryDns = "37.32.30.252"
         });
     }
 
