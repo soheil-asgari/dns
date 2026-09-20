@@ -1,4 +1,5 @@
 .:53 {
+    reload 30s
     health
     prometheus :9153
     
@@ -13,16 +14,22 @@
         proxy_ip 37.32.28.44
     }
     
+    # Handle ANY queries locally (RFC 8482)
+    any
+    
     # Cache responses — low TTL so new Redis entries are picked up within seconds
     cache 5 {
         success 5
         denial 5
+        prefetch 5 30% 10m
     }
     
     # Forward to upstream DNS for non-gaming domains
-    forward . 8.8.8.8 1.1.1.1 {
+    forward . 8.8.8.8 1.1.1.1 9.9.9.9 {
         max_concurrent 2000
-        prefer_udp
+        health_check 5s
+        policy sequential
+        expire 15m
     }
 }
 
