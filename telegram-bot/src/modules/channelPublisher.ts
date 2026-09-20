@@ -11,14 +11,43 @@ const parser = new Parser({
     },
 });
 
+// فقط فیدهای اختصاصی اخبار بازی‌ها (بدون فیلم، سریال و سخت‌افزار)
 const RSS_FEEDS = [
-    'https://www.pcgamer.com/rss/',
-    'https://feeds.feedburner.com/ign/all',
+    'https://www.gamespot.com/feeds/game-news/',
+    'https://feeds.feedburner.com/ign/games-all',
+    'https://www.pcgamer.com/news/rss/',
 ];
+
+// لیست سیاه دسته‌بندی‌ها و کلماتی که ربطی به اخبار هیجانی بازی ندارند
+const IGNORED_URL_PARTS = [
+    'gaming-industry',
+    'game-development',
+    'hardware',
+    'tech',
+    'movie',
+    'tv-shows',
+    'comic',
+    'review',
+    'guide',
+    'opinion',
+    'deals',
+];
+
+function isRelevantGamingNews(link: string, title: string): boolean {
+    const lowerLink = link.toLowerCase();
+    const lowerTitle = title.toLowerCase();
+
+    for (const ignored of IGNORED_URL_PARTS) {
+        if (lowerLink.includes(ignored) || lowerTitle.includes(ignored)) {
+            return false;
+        }
+    }
+    return true;
+}
 
 export async function publishLatestGamingNews(bot: Telegraf<any>, redisClient: any) {
     const channelId = process.env.CHANNEL_ID;
-    const botUsername = process.env.BOT_USERNAME || 'MyDnsBot';
+    const botUsername = process.env.BOT_USERNAME || 'rhynodnsbot';
 
     if (!channelId) {
         console.warn('[ChannelPublisher] CHANNEL_ID is not configured.');
@@ -28,14 +57,21 @@ export async function publishLatestGamingNews(bot: Telegraf<any>, redisClient: a
     for (const feedUrl of RSS_FEEDS) {
         try {
             const feed = await parser.parseURL(feedUrl);
-            const items = feed.items.slice(0, 5);
+            const items = feed.items.slice(0, 10); // بررسی ۱۰ آیتم اخیر برای پیدا کردن بهترین خبر
 
             for (const item of items) {
                 if (!item.link || !item.title) continue;
 
+                // ۱. فیلتر موضوعی: رد کردن مطالب صنعتی، سخت‌افزاری و غیرمرتبط
+                if (!isRelevantGamingNews(item.link, item.title)) {
+                    continue;
+                }
+
+                // ۲. رد کردن اخباری که قبلاً ارسال شده‌اند
                 const alreadyPosted = await checkIsPosted(redisClient, item.link);
                 if (alreadyPosted) continue;
 
+                // ۳. استخراج عکس بنر خبر
                 let imageUrl: string | undefined = undefined;
                 if (item.enclosure && item.enclosure.url && item.enclosure.type?.startsWith('image/')) {
                     imageUrl = item.enclosure.url;
@@ -75,7 +111,7 @@ export async function publishLatestGamingNews(bot: Telegraf<any>, redisClient: a
                 }
 
                 await markAsPosted(redisClient, item.link);
-                console.log(`[ChannelPublisher] Successfully posted: ${item.title}`);
+                console.log(`[ChannelPublisher] Successfully posted gaming news: ${item.title}`);
                 return;
             }
         } catch (error) {
