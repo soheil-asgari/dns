@@ -100,23 +100,26 @@ services:
       dockerfile: Dockerfile
     extra_hosts:
       - "api.telegram.org:10.10.0.1"
+    env_file:
+      - .env
     environment:
       BOT_TOKEN: ${BOT_TOKEN:-}
       API_URL: http://backend-api:8080
       REDIS_URL: redis://redis:6379
       ADMIN_IDS: ${ADMIN_IDS:-}
+      CHANNEL_ID: ${CHANNEL_ID:-@rhynodns}
+      BOT_USERNAME: ${BOT_USERNAME:-rhynodnsbot}
+      GAPGPT_API_KEY: ${GAPGPT_API_KEY:-}
+      GAPGPT_BASE_URL: ${GAPGPT_BASE_URL:-https://api.gapgpt.app/v1}
+      GAPGPT_MODEL: ${GAPGPT_MODEL:-gpt-5.6-luna}
       LOG_LEVEL: debug
     ports:
-      - "5000:5000" # Health endpoint
+      - "5000:5000"
+    networks:
+      - dns-net
     depends_on:
       redis:
         condition: service_healthy
-      backend-api:
-        condition: service_started
-    restart: unless-stopped
-    networks:
-      - dns-net
-
   # ============================================
   # Redis (Cache + Session Store)
   # ============================================

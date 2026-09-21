@@ -1,5 +1,5 @@
 .:53 {
-    reload 30s
+    # reload 30s
     health
     prometheus :9153
     
@@ -14,7 +14,7 @@
     }
     
     # پاسخ سریع به کوئری‌های ANY
-    any
+    # any
     
     # کش بهینه با ترتیب صحیح پارامترها
     cache 5 {
