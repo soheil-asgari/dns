@@ -217,7 +217,12 @@ async function init() {
 
         switch (payload.type) {
           case 'payment_success': {
-            const planName = payload.planTitle || 'نامشخص';
+            // Cascade fallback for plan title: payload.planTitle -> payload.planName -> payload.planDuration -> 'اشتراک ویژه'
+            let planName = payload.planTitle || payload.planName || '';
+            if (!planName && payload.planDurationDays) {
+              planName = `${payload.planDurationDays} روزه`;
+            }
+            planName = planName || 'اشتراک ویژه';
             const refId = payload.refId || '—';
             const amount = (payload.amount || 0).toLocaleString('fa-IR');
             const endDate = new Date(payload.endDate);
@@ -230,7 +235,8 @@ async function init() {
               `💳 شماره پیگیری: \`${refId}\`\n` +
               `💰 مبلغ: ${amount} تومان\n` +
               `📅 تاریخ پایان اشتراک: ${expiryShamsi}\n\n` +
-              `اکنون می‌توانید از طریق منوی ربات، آی‌پی دستگاه خود را ثبت و از سرویس استفاده کنید.`,
+              `⚠️ *توجه مهم:* برای فعال‌سازی ترافیک روی پورت ۴۴۳، حتماً آی‌پی دستگاه خود را ثبت کنید.\n` +
+              `اکنون از طریق دکمه زیر اقدام کنید:`,
               {
                 parse_mode: 'Markdown',
                 reply_markup: {

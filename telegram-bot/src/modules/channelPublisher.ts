@@ -8,6 +8,7 @@ const parser = new Parser({
         item: [
             ['media:content', 'mediaContent'],
             ['enclosure', 'enclosure'],
+            ['media:thumbnail', 'mediaThumbnail'],
         ],
     },
 });
@@ -34,6 +35,23 @@ const IGNORED_URL_PARTS = [
     'deals',
 ];
 
+// الگوهای query string که رزولوشن عکس رو پایین میارن
+const RESIZE_QUERY_PATTERNS = [
+    /\?w=\d+/i,
+    /\?h=\d+/i,
+    /\?width=\d+/i,
+    /\?height=\d+/i,
+    /\?quality=\d+/i,
+    /\?resize=[^&]+/i,
+    /\?fit=[^&]+/i,
+    /\?auto=[^&]+/i,
+    /\?crop=[^&]+/i,
+    /\?scale=\d+/i,
+];
+
+// الگوی حذف پسوند CMS thumbnail مثل -150x150.jpg یا -300x200.png
+const CMS_THUMBNAIL_SUFFIX = /-\d+x\d+(?=\.(jpg|jpeg|png|webp|gif|bmp))/i;
+
 function isRelevantGamingNews(link: string, title: string): boolean {
     const lowerLink = link.toLowerCase();
     const lowerTitle = title.toLowerCase();
@@ -44,6 +62,89 @@ function isRelevantGamingNews(link: string, title: string): boolean {
         }
     }
     return true;
+}
+
+/**
+ * استخراج لینک عکس با بالاترین رزولوشن ممکن از آیتم RSS
+ * با پاک کردن query string های کاهش‌دهنده کیفیت و حذف سافیکس thumbnail
+ */
+function extractHighResImage(rssItem: any): string | null {
+    // 1. media:content (first with image type)
+    const mc = rssItem.mediaContent;
+    if (mc) {
+        if (Array.isArray(mc)) {
+            for (const m of mc) {
+                if (m.$ && m.$.url && (!m.$.type || m.$.type.startsWith('image/'))) {
+                    const cleaned = cleanImageUrl(m.$.url);
+                    if (cleaned) return cleaned;
+                }
+            }
+        } else if (mc.$ && mc.$.url) {
+            const cleaned = cleanImageUrl(mc.$.url);
+            if (cleaned) return cleaned;
+        }
+    }
+
+    // 2. enclosure
+    if (rssItem.enclosure && rssItem.enclosure.url) {
+        if (!rssItem.enclosure.type || rssItem.enclosure.type.startsWith('image/')) {
+            const cleaned = cleanImageUrl(rssItem.enclosure.url);
+            if (cleaned) return cleaned;
+        }
+    }
+
+    // 3. media:thumbnail
+    const mt = rssItem.mediaThumbnail;
+    if (mt) {
+        if (Array.isArray(mt)) {
+            for (const t of mt) {
+                if (t.$ && t.$.url) {
+                    const cleaned = cleanImageUrl(t.$.url);
+                    if (cleaned) return cleaned;
+                }
+            }
+        } else if (mt.$ && mt.$.url) {
+            const cleaned = cleanImageUrl(mt.$.url);
+            if (cleaned) return cleaned;
+        }
+    }
+
+    // 4. Extract <img> from HTML content
+    const htmlContent = rssItem.content || rssItem['content:encoded'] || '';
+    if (htmlContent) {
+        const imgMatch = htmlContent.match(/<img[^>]+src=["']([^"']+)["']/i);
+        if (imgMatch && imgMatch[1]) {
+            const cleaned = cleanImageUrl(imgMatch[1]);
+            if (cleaned) return cleaned;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * پاکسازی URL عکس: حذف query string های کاهش کیفیت، حذف سافیکس thumbnail و دیکد کردن موجودیت‌های HTML
+ */
+function cleanImageUrl(url: string): string | null {
+    if (!url || typeof url !== 'string') return null;
+
+    let cleaned = url.trim();
+
+    // Decode HTML entities like & to &
+    cleaned = cleaned.replace(/&/g, '&').replace(/&#038;/g, '&');
+
+    // Remove CMS thumbnail size suffixes: -150x150.jpg -> .jpg
+    cleaned = cleaned.replace(CMS_THUMBNAIL_SUFFIX, '');
+
+    // Strip resize/downgrade query params
+    for (const pattern of RESIZE_QUERY_PATTERNS) {
+        cleaned = cleaned.replace(pattern, '');
+    }
+
+    // Clean up leftover trailing ? or & if query string was fully removed
+    cleaned = cleaned.replace(/[?&]$/, '');
+
+    return cleaned || null;
 }
 
 export async function publishLatestGamingNews(bot: Telegraf<any>, redisClient: any) {
@@ -72,13 +173,8 @@ export async function publishLatestGamingNews(bot: Telegraf<any>, redisClient: a
                 const alreadyPosted = await checkIsPosted(redisClient, item.link);
                 if (alreadyPosted) continue;
 
-                // ۳. استخراج عکس بنر خبر
-                let imageUrl: string | undefined = undefined;
-                if (item.enclosure && item.enclosure.url && item.enclosure.type?.startsWith('image/')) {
-                    imageUrl = item.enclosure.url;
-                } else if ((item as any).mediaContent && (item as any).mediaContent.$?.url) {
-                    imageUrl = (item as any).mediaContent.$.url;
-                }
+                // ۳. استخراج عکس بنر خبر با بالاترین رزولوشن
+                const imageUrl = extractHighResImage(item);
 
                 const snippet = item.contentSnippet || item.content || item.title;
                 let aiCaption = '';
@@ -137,7 +233,6 @@ function markAsPosted(redis: any, url: string): Promise<void> {
         });
     });
 }
-
 
 
 

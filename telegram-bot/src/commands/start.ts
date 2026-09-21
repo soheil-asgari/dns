@@ -1,31 +1,11 @@
 import type { Context } from 'telegraf';
 import { Markup } from 'telegraf';
 import { getOrCreateUser, getSubscriptionStatus, registerIp, detectIp, buildQuickRegisterUrl, getPlans, applyDiscount, checkout } from '../services/api.js';
+import { formatRemainingTime, formatPlanType, resolvePlanTitle } from '../utils/formatters.js';
 
-function formatTimeSpan(ts: { hours?: number; minutes?: number; seconds?: number } | string): string {
-  if (typeof ts === 'string') {
-    // Parse ISO duration like "PT23H59M59S"
-    const match = ts.match(/PT?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-    if (!match) return ts;
-    const h = parseInt(match[1] || '0');
-    const m = parseInt(match[2] || '0');
-    const s = parseInt(match[3] || '0');
-    if (h > 0) return `${h} ساعت و ${m} دقیقه`;
-    if (m > 0) return `${m} دقیقه و ${s} ثانیه`;
-    return `${s} ثانیه`;
-  }
-  // Object with hours/minutes/seconds
-  const h = ts.hours || 0;
-  const m = ts.minutes || 0;
-  const s = ts.seconds || 0;
-  if (h > 0) return `${h} ساعت و ${m} دقیقه`;
-  if (m > 0) return `${m} دقیقه و ${s} ثانیه`;
-  return `${s} ثانیه`;
-}
-
-// Persistent reply keyboard markup
+// Persistent reply keyboard markup — overhauled with "My Plan & DNS" button
 const mainKeyboard = Markup.keyboard([
-  ['🔍 وضعیت و آی‌پی من', '⚡️ ثبت آی‌پی من'],
+  ['🎮 پلن و دی‌ان‌اس من', '⚡️ ثبت آی‌پی من'],
   ['💳 خرید و تمدید اشتراک', '📖 راهنمای تنظیم DNS'],
 ]).resize().persistent();
 
@@ -39,53 +19,24 @@ export async function startHandler(ctx: Context) {
     return;
   }
 
-  // Create user and provision trial
-  const result = await getOrCreateUser(telegramId, username, firstName, true);
+  // Create / get user silently (no raw status dump)
+  await getOrCreateUser(telegramId, username, firstName, true);
 
-  if (result.trialProvisioned && result.trial) {
-    const remaining = formatTimeSpan(result.trial.remainingTime);
-    await ctx.reply(
-      `🎮 *DNS Manager Bot*\n\n` +
-      `سلام ${firstName || 'کاربر'}! 👋\n\n` +
-      `✅ اشتراک آزمایشی ۲۴ ساعته شما فعال شد.\n` +
-      `⏳ زمان باقی‌مانده: *${remaining}*\n\n` +
-      `برای فعال‌سازی و اتصال به سرور، لطفاً آی‌پی عمومی اینترنت خود را به صورت پیام متنی ارسال کنید (مثال: \`1.2.3.4\`).`,
-      {
-        parse_mode: 'Markdown',
-        ...mainKeyboard,
-      }
-    );
-    return;
-  }
-
-  // User already exists, check subscription status
-  const status = await getSubscriptionStatus(telegramId);
-
-  let message: string;
-  if (status.hasActiveSubscription && status.currentSubscription) {
-    const sub = status.currentSubscription;
-    const remaining = formatTimeSpan(sub.remainingTime);
-    message =
-      `🎮 *DNS Manager Bot*\n\n` +
-      `سلام ${firstName || 'کاربر'}! 👋\n\n` +
-      `✅ اشتراک شما فعال است.\n` +
-      `📋 نوع: *${sub.type === 'Trial24H' ? 'آزمایشی ۲۴ ساعته' : sub.type}*\n` +
-      `⏳ زمان باقی‌مانده: *${remaining}*\n` +
-      (sub.registeredIp ? `🔗 آی‌پی ثبت‌شده: \`${sub.registeredIp}\`\n\n` : '\n') +
-      `از منوی زیر انتخاب کنید:`;
-  } else {
-    message =
-      `🎮 *DNS Manager Bot*\n\n` +
-      `سلام ${firstName || 'کاربر'}! 👋\n\n` +
-      `❌ شما اشتراک فعالی ندارید.\n` +
-      `برای خرید اشتراک یا استفاده از دوره آزمایشی با مدیریت تماس بگیرید.\n\n` +
-      `از منوی زیر انتخاب کنید:`;
-  }
-
-  await ctx.reply(message, {
-    parse_mode: 'Markdown',
-    ...mainKeyboard,
-  });
+  // Clean, welcoming intro — no raw subscription dumps
+  await ctx.reply(
+    `🎮 *به راینو دی‌ان‌اس خوش آمدید!* 👋\n\n` +
+    `سرویس ضدتحریم اختصاصی برای گیمرهای حرفه‌ای:\n` +
+    `🎯 Warzone | Valorant | Apex Legends | Battle.net\n` +
+    `🎯 Steam | Discord | FC 25 و هر بازی آنلاین دیگر\n\n` +
+    `✅ بدون پکت‌لاست\n` +
+    `✅ پینگ پایدار روی سرورهای اروپا\n` +
+    `✅ ثبت آی‌پی در ۱ کلیک\n\n` +
+    `از منوی زیر گزینه مورد نظر را انتخاب کنید 👇`,
+    {
+      parse_mode: 'Markdown',
+      ...mainKeyboard,
+    }
+  );
 }
 
 export async function helpHandler(ctx: Context) {
@@ -95,25 +46,38 @@ export async function helpHandler(ctx: Context) {
 // Handle persistent keyboard text commands
 async function handlePersistentKeyboard(ctx: Context, text: string, telegramId: number) {
   switch (text) {
-    case '🔍 وضعیت و آی‌پی من': {
+    case '🎮 پلن و دی‌ان‌اس من': {
       try {
         const status = await getSubscriptionStatus(telegramId);
         if (!status.hasActiveSubscription || !status.currentSubscription) {
-          await ctx.reply('❌ شما اشتراک فعالی ندارید.', { ...mainKeyboard });
+          await ctx.reply(
+            '🎮 *پلن و دی‌ان‌اس من*\n\n' +
+            '❌ شما اشتراک فعالی ندارید.\n\n' +
+            'برای شروع می‌توانید از تست رایگان ۲۴ ساعته استفاده کنید یا یکی از پلن‌های ویژه را خریداری کنید.\n' +
+            'از منوی «💳 خرید و تمدید اشتراک» اقدام کنید.',
+            { parse_mode: 'Markdown', ...mainKeyboard }
+          );
           return;
         }
+
         const sub = status.currentSubscription;
-        const remaining = formatTimeSpan(sub.remainingTime);
+        const remaining = formatRemainingTime(sub.remainingTime);
+        const planName = formatPlanType(sub.type);
+        const ipLine = sub.registeredIp
+          ? `🔗 آی‌پی ثبت‌شده: \`${sub.registeredIp}\``
+          : '⚠️ *هیچ آی‌پی ثبت نشده است!*\nبرای فعال‌سازی سرویس، حتماً آی‌پی خود را ثبت کنید.';
+
         await ctx.reply(
-          `📊 *وضعیت و آی‌پی من*\n\n` +
-          `📋 نوع اشتراک: *${sub.type === 'Trial24H' ? 'آزمایشی ۲۴ ساعته' : sub.type}*\n` +
-          `📅 شروع: ${new Date(sub.startDate).toLocaleDateString('fa-IR')}\n` +
-          `📅 پایان: ${new Date(sub.endDate).toLocaleDateString('fa-IR')}\n` +
-          `⏳ زمان باقی‌مانده: *${remaining}*\n` +
-          (sub.registeredIp
-            ? `🔗 آی‌پی ثبت‌شده: \`${sub.registeredIp}\``
-            : '🔗 هیچ آی‌پی ثبت نشده است') +
-          `\n\n🌐 سرور DNS: \`37.32.28.44\``,
+          `🎮 *پلن و دی‌ان‌اس من*\n\n` +
+          `📋 *پلن:* ${planName}\n` +
+          `⏳ *زمان باقی‌مانده:* ${remaining}\n` +
+          `${ipLine}\n\n` +
+          `🌐 *DNS سرور:*\n` +
+          `🔹 Primary: \`37.32.28.44\`\n` +
+          `🔸 Secondary: \`10.202.10.202\`\n\n` +
+          `⚠️ *توجه مهم:* دسترسی شما صرفاً بر اساس آی‌پی ثبت‌شده محدود می‌شود.\n` +
+          `اگر آی‌پی اینترنت شما تغییر کند (مثلاً با ریست مودم)، باید از طریق\n` +
+          `«🌐 ثبت آی‌پی من» آی‌پی جدید را ثبت کنید.`,
           { parse_mode: 'Markdown', ...mainKeyboard }
         );
       } catch {
@@ -125,10 +89,10 @@ async function handlePersistentKeyboard(ctx: Context, text: string, telegramId: 
     case '⚡️ ثبت آی‌پی من': {
       const quickRegisterUrl = buildQuickRegisterUrl(telegramId);
       await ctx.reply(
-        `⚡️ *ثبت خودکار آی‌پی*\n\n` +
-        `روی لینک زیر کلیک کنید تا آی‌پی شما به صورت آنی شناسایی و فعال شود:\n\n` +
+        '⚡️ *ثبت خودکار آی‌پی*\n\n' +
+        'روی لینک زیر کلیک کنید تا آی‌پی شما به صورت آنی شناسایی و فعال شود:\n\n' +
         `👉 [ثبت و فعال‌سازی آی‌پی من](${quickRegisterUrl})\n\n` +
-        `_همچنین می‌توانید آی‌پی اینترنت خود را به صورت دستی در چت بفرستید._`,
+        '_همچنین می‌توانید آی‌پی اینترنت خود را به صورت دستی در چت بفرستید._',
         {
           parse_mode: 'Markdown',
           reply_markup: {
@@ -151,8 +115,9 @@ async function handlePersistentKeyboard(ctx: Context, text: string, telegramId: 
 
         if (plans.length === 1) {
           const plan = plans[0];
+          const planTitle = resolvePlanTitle(plan);
           await ctx.reply(
-            `📦 *${plan.title}*\n` +
+            `📦 *${planTitle}*\n` +
             `💰 مبلغ: *${plan.price.toLocaleString('fa-IR')}* تومان\n\n` +
             `آیا کد تخفیف دارید؟`,
             {
@@ -169,10 +134,10 @@ async function handlePersistentKeyboard(ctx: Context, text: string, telegramId: 
           );
         } else {
           const lines = plans.map((p, i) =>
-            `${i + 1}. ${p.title} — ${p.price.toLocaleString('fa-IR')} تومان`
+            `${i + 1}. ${resolvePlanTitle(p)} — ${p.price.toLocaleString('fa-IR')} تومان`
           );
           const inlineButtons = plans.map(p => [
-            Markup.button.callback(`📦 ${p.title}`, `select_plan_${p.id}`)
+            Markup.button.callback(`📦 ${resolvePlanTitle(p)}`, `select_plan_${p.id}`)
           ]);
 
           await ctx.reply(
@@ -285,7 +250,7 @@ export async function setupCallbacks(bot: any) {
       return;
     }
     const inlineButtons = plans.map(p => [
-      { text: `📦 ${p.title}`, callback_data: `select_plan_${p.id}` }
+      { text: `📦 ${resolvePlanTitle(p)}`, callback_data: `select_plan_${p.id}` }
     ]);
     await ctx.reply(
       '💳 *تمدید اشتراک*\n\n' +
@@ -321,13 +286,14 @@ export async function setupCallbacks(bot: any) {
     }
 
     const sub = status.currentSubscription;
-    const remaining = formatTimeSpan(sub.remainingTime);
+    const remaining = formatRemainingTime(sub.remainingTime);
+    const planName = formatPlanType(sub.type);
     await ctx.reply(
       `📊 *وضعیت اشتراک*\n\n` +
-      `📋 نوع: *${sub.type === 'Trial24H' ? 'آزمایشی ۲۴ ساعته' : sub.type}*\n` +
+      `📋 نوع: ${planName}\n` +
       `📅 شروع: ${new Date(sub.startDate).toLocaleDateString('fa-IR')}\n` +
       `📅 پایان: ${new Date(sub.endDate).toLocaleDateString('fa-IR')}\n` +
-      `⏳ زمان باقی‌مانده: *${remaining}*\n` +
+      `⏳ زمان باقی‌مانده: ${remaining}\n` +
       (sub.registeredIp ? `🔗 آی‌پی ثبت‌شده: \`${sub.registeredIp}\`` : '🔗 هیچ آی‌پی ثبت نشده است'),
       { parse_mode: 'Markdown', ...mainKeyboard }
     );
@@ -449,15 +415,28 @@ export async function setupCallbacks(bot: any) {
 
       const checkoutResult = await checkout(telegramId, planId, discountCode);
 
+      // Fetch plan info to show title in checkout message
+      let checkoutPlanTitle = planTitle || '';
+      if (!checkoutPlanTitle) {
+        try {
+          const plans = await getPlans();
+          const plan = plans.find(p => p.id === planId);
+          if (plan) {
+            checkoutPlanTitle = resolvePlanTitle(plan);
+          }
+        } catch { /* ignore, use fallback */ }
+      }
+      checkoutPlanTitle = checkoutPlanTitle || 'اشتراک ویژه';
+
       await ctx.reply(
-        '🏷 *پلن انتخابی:* ' + checkoutResult.amount.toLocaleString('fa-IR') + ' تومان\n' +
+        '🏷 *پلن انتخابی:* ' + checkoutPlanTitle + '\n' +
         '💰 *مبلغ نهایی:* ' + checkoutResult.amount.toLocaleString('fa-IR') + ' تومان\n\n' +
         'جهت تکمیل خرید روی لینک زیر کلیک کنید:',
         {
           parse_mode: 'Markdown',
           reply_markup: {
             inline_keyboard: [
-              [{ text: '🔗 ورود به درگاه پرداخت زرین‌پال (شاپرک)', url: checkoutResult.paymentUrl }]
+              [{ text: '🔗 ورود به درگاه پرداخت', url: checkoutResult.paymentUrl }]
             ]
           }
         }
