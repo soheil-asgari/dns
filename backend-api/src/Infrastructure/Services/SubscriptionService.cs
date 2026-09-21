@@ -200,11 +200,27 @@ public class SubscriptionService : ISubscriptionService
         // Publish IP registration notification via Redis pub/sub
         try
         {
+            var remainingTimeSpan = activeSub.EndDate - DateTime.UtcNow;
+            var totalHours = (int)Math.Ceiling(remainingTimeSpan.TotalHours);
+            string formattedTime;
+            if (totalHours >= 24)
+            {
+                var days = totalHours / 24;
+                var hours = totalHours % 24;
+                formattedTime = hours > 0 ? $"{days} روز و {hours} ساعت" : $"{days} روز";
+            }
+            else
+            {
+                formattedTime = $"{totalHours} ساعت";
+            }
+
             var notifyPayload = System.Text.Json.JsonSerializer.Serialize(new
             {
                 telegramId = telegramId,
                 ipAddress = ipAddress,
-                type = "ip_registered"
+                type = "ip_registered",
+                remainingTime = totalHours,
+                formattedTime = formattedTime
             });
             var subscriber = _redis.Multiplexer.GetSubscriber();
             await subscriber.PublishAsync(RedisChannel.Literal("payment:notify"), notifyPayload);

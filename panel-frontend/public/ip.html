@@ -768,6 +768,24 @@
       statusDot.className = 'status-dot ' + state;
     }
 
+    function toPersianDigits(str) {
+      const digits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+      return str.replace(/[0-9]/g, ch => digits[parseInt(ch)]);
+    }
+
+    function formatRemainingTime(hours) {
+      const total = Math.round(hours);
+      if (total >= 24) {
+        const days = Math.floor(total / 24);
+        const remaining = total % 24;
+        if (remaining === 0) {
+          return `${days} روز`;
+        }
+        return `${days} روز و ${remaining} ساعت`;
+      }
+      return `${total} ساعت`;
+    }
+
     function showSuccess(ip, remainingHours, primaryDns, secondaryDns) {
       actionBtn.style.display = 'none';
       statusText.style.display = 'none';
@@ -776,8 +794,8 @@
       successSection.classList.add('show');
       document.querySelector('.card').classList.add('success');
 
-      const hrs = Math.round(remainingHours);
-      timerText.textContent = `مدت اعتبار باقی‌مانده: ${hrs} ساعت`;
+      const formatted = formatRemainingTime(remainingHours);
+      timerText.textContent = `مدت اعتبار باقی‌مانده: ${toPersianDigits(formatted)}`;
 
       if (primaryDns) {
         const el1 = document.getElementById('dnsPrimary');

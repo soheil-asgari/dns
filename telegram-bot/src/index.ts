@@ -252,14 +252,17 @@ async function init() {
 
           case 'ip_registered': {
             const userIp = payload.ipAddress || '—';
+            const remainingTime = payload.formattedTime || `${payload.remainingTime || 0} ساعت`;
             await bot.telegram.sendMessage(
               chatId,
-              `🎮 *آی‌پی شما با موفقیت در سامانه ثبت شد!*\n\n` +
-              `🌐 آی‌پی ثبت‌شده: \`${userIp}\`\n\n` +
-              `تنظیمات DNS را به صورت زیر روی کنسول یا سیستم خود قرار دهید:\n` +
-              `🔹 Primary DNS: \`37.32.28.44\`\n` +
-              `🔸 Secondary DNS: \`37.32.30.252\`\n\n` +
-              `💡 *نکته:* پس از ست کردن DNS، سیستم یا کنسول خود را یک‌بار ریستارت کنید.`,
+              `✅ *آی‌پی اینترنت شما با موفقیت ثبت شد!*\n\n` +
+              `🔗 *آی‌پی فعال:* \`${userIp}\`\n` +
+              `⏳ *مدت اعتبار باقی‌مانده:* ${remainingTime}\n\n` +
+              `━━━━━━━━━━━━━━━━━━━\n` +
+              `🌐 *آدرس‌های DNS اختصاصی راینو:*\n` +
+              `🔹 *Primary DNS:* \`37.32.28.44\`\n` +
+              `🔸 *Secondary DNS:* \`37.32.30.252\`\n\n` +
+              `⚠️ *نکته مهم:* در صورتی که مودم خود را خاموش و روشن کردید یا آی‌پی شما تغییر کرد، جهت جلوگیری از قطع شدن دسترسی به بازی‌ها مجدداً آی‌پی خود را ثبت کنید.`,
               { parse_mode: 'Markdown' }
             );
             break;
