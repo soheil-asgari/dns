@@ -1,8 +1,7 @@
 FROM golang:1.21-alpine AS builder
 
-# تنظیم پروکسی برای عبور از تحریم و خطای connection reset در دانلود پکیج‌ها
 ENV GOPROXY=https://goproxy.io,direct
-ENV GOSUMDB=sum.golang.org
+ENV GOSUMDB=off
 
 WORKDIR /src
 COPY go.mod go.sum* ./
