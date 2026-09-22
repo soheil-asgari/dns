@@ -73,8 +73,8 @@ async function handlePersistentKeyboard(ctx: Context, text: string, telegramId: 
           `⏳ *زمان باقی‌مانده:* ${remaining}\n` +
           `${ipLine}\n\n` +
           `🌐 *DNS سرور:*\n` +
-          `🔹 Primary: \`37.32.28.44\`\n` +
-          `🔸 Secondary: \`37.32.30.252\`\n\n` +
+          `🔹 Primary: \`185.226.119.97\`\n` +
+          `🔸 Secondary: \`185.226.117.62\`\n\n` +
           `⚠️ *توجه مهم:* دسترسی شما صرفاً بر اساس آی‌پی ثبت‌شده محدود می‌شود.\n` +
           `اگر آی‌پی اینترنت شما تغییر کند (مثلاً با ریست مودم)، باید از طریق\n` +
           `«🌐 ثبت آی‌پی من» آی‌پی جدید را ثبت کنید.`,
@@ -161,25 +161,25 @@ async function handlePersistentKeyboard(ctx: Context, text: string, telegramId: 
       await ctx.reply(
         '⚙️ *راهنمای تنظیم DNS*\n\n' +
         'برای استفاده از سرویس، DNS سرور خود را به آدرس زیر تغییر دهید:\n\n' +
-        '`37.32.28.44`\n\n' +
+        '`185.226.119.97`\n\n' +
         '*آموزش تنظیم در سیستم‌عامل‌های مختلف:*\n\n' +
         '1️⃣ *ویندوز:*\n' +
         '   - تنظیمات شبکه ← اینترنت → تغییر تنظیمات آداپتور\n' +
         '   - روی اتصال خود کلیک راست → Properties\n' +
         '   - Internet Protocol Version 4 (TCP/IPv4) → Properties\n' +
         '   - Use the following DNS server addresses\n' +
-        '   - DNS: `37.32.28.44`\n\n' +
+        '   - DNS: `185.226.119.97`\n\n' +
         '2️⃣ *اندروید:*\n' +
         '   - Settings → Wi-Fi → شبکه فعلی\n' +
         '   - Modify network → Advanced → IP settings → Static\n' +
-        '   - DNS: `37.32.28.44`\n\n' +
+        '   - DNS: `185.226.119.97`\n\n' +
         '3️⃣ *iOS:*\n' +
         '   - Settings → Wi-Fi → شبکه فعلی\n' +
         '   - Configure DNS → Manual\n' +
-        '   - DNS: `37.32.28.44`\n\n' +
+        '   - DNS: `185.226.119.97`\n\n' +
         '4️⃣ *لینوکس / مک:*\n' +
         '   - تنظیمات شبکه → DNS\n' +
-        '   - افزودن `37.32.28.44`',
+        '   - افزودن `185.226.119.97`',
         { parse_mode: 'Markdown', ...mainKeyboard }
       );
       return true;
@@ -219,25 +219,25 @@ export async function setupCallbacks(bot: any) {
     await ctx.reply(
       '⚙️ *راهنمای تنظیم DNS*\n\n' +
       'برای استفاده از سرویس، DNS سرور خود را به آدرس زیر تغییر دهید:\n\n' +
-      '`37.32.28.44`\n\n' +
+      '`185.226.119.97`\n\n' +
       '*آموزش تنظیم در سیستم‌عامل‌های مختلف:*\n\n' +
       '1️⃣ *ویندوز:*\n' +
       '   - تنظیمات شبکه ← اینترنت → تغییر تنظیمات آداپتور\n' +
       '   - روی اتصال خود کلیک راست → Properties\n' +
       '   - Internet Protocol Version 4 (TCP/IPv4) → Properties\n' +
       '   - Use the following DNS server addresses\n' +
-      '   - DNS: `37.32.28.44`\n\n' +
+      '   - DNS: `185.226.119.97`\n\n' +
       '2️⃣ *اندروید:*\n' +
       '   - Settings → Wi-Fi → شبکه فعلی\n' +
       '   - Modify network → Advanced → IP settings → Static\n' +
-      '   - DNS: `37.32.28.44`\n\n' +
+      '   - DNS: `185.226.119.97`\n\n' +
       '3️⃣ *iOS:*\n' +
       '   - Settings → Wi-Fi → شبکه فعلی\n' +
       '   - Configure DNS → Manual\n' +
-      '   - DNS: `37.32.28.44`\n\n' +
+      '   - DNS: `185.226.119.97`\n\n' +
       '4️⃣ *لینوکس / مک:*\n' +
       '   - تنظیمات شبکه → DNS\n' +
-      '   - افزودن `37.32.28.44`',
+      '   - افزودن `185.226.119.97`',
       { parse_mode: 'Markdown' }
     );
   });
@@ -304,25 +304,25 @@ export async function setupCallbacks(bot: any) {
     await ctx.reply(
       '⚙️ *راهنمای تنظیم DNS*\n\n' +
       'برای استفاده از سرویس، DNS سرور خود را به آدرس زیر تغییر دهید:\n\n' +
-      '`37.32.28.44`\n\n' +
+      '`185.226.119.97`\n\n' +
       '*آموزش تنظیم در سیستم‌عامل‌های مختلف:*\n\n' +
       '1️⃣ *ویندوز:*\n' +
       '   - تنظیمات شبکه ← اینترنت → تغییر تنظیمات آداپتور\n' +
       '   - روی اتصال خود کلیک راست → Properties\n' +
       '   - Internet Protocol Version 4 (TCP/IPv4) → Properties\n' +
       '   - Use the following DNS server addresses\n' +
-      '   - DNS: `37.32.28.44`\n\n' +
+      '   - DNS: `185.226.119.97`\n\n' +
       '2️⃣ *اندروید:*\n' +
       '   - Settings → Wi-Fi → شبکه فعلی\n' +
       '   - Modify network → Advanced → IP settings → Static\n' +
-      '   - DNS: `37.32.28.44`\n\n' +
+      '   - DNS: `185.226.119.97`\n\n' +
       '3️⃣ *iOS:*\n' +
       '   - Settings → Wi-Fi → شبکه فعلی\n' +
       '   - Configure DNS → Manual\n' +
-      '   - DNS: `37.32.28.44`\n\n' +
+      '   - DNS: `185.226.119.97`\n\n' +
       '4️⃣ *لینوکس / مک:*\n' +
       '   - تنظیمات شبکه → DNS\n' +
-      '   - افزودن `37.32.28.44`',
+      '   - افزودن `185.226.119.97`',
       { parse_mode: 'Markdown', ...mainKeyboard }
     );
   });
@@ -485,7 +485,7 @@ export async function setupCallbacks(bot: any) {
             `✅ *آی‌پی ${result.registeredIp} با موفقیت در سیستم ثبت شد!*\n\n` +
             `⚠️ آی‌پی قبلی شما غیرفعال و آی‌پی جدید جایگزین شد.\n\n` +
             `از حالا می‌توانید با ست کردن DNS زیر، از اینترنت بدون تحریم استفاده کنید:\n` +
-            `Primary DNS: \`37.32.28.44\``,
+            `Primary DNS: \`185.226.119.97\``,
             { parse_mode: 'Markdown', ...mainKeyboard }
           );
         } else {

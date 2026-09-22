@@ -120,8 +120,8 @@ public class SubscriptionController : ControllerBase
             success = true,
             ip = clientIp,
             remainingHours = remainingTime.TotalHours,
-            primaryDns = "37.32.28.44",
-            secondaryDns = "37.32.30.252"
+            primaryDns = "185.226.119.97",
+            secondaryDns = "185.226.117.62"
         });
     }
 

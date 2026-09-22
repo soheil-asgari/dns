@@ -10,7 +10,7 @@
     gaming_filter {
         redis_addr redis:6379
         refresh_interval 5s
-        proxy_ip 37.32.28.44
+        proxy_ip 185.226.119.97
     }
     
     # پاسخ سریع به کوئری‌های ANY

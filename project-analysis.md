@@ -102,7 +102,7 @@
 | Issue | Severity | Description |
 |-------|----------|----------|
 | **No TLS for DNS-over-HTTPS** | 🟡 Medium | CoreDNS only serves plain DNS on port 53. There's no DoH (DNS-over-HTTPS) endpoint configured. The architecture diagram mentions DoH but it's not implemented. |
-| **Proxy IP Hardcoded** | 🟡 Medium | [`proxy_ip 37.32.28.44`](dns-server/Corefile:13) — The proxy IP is hardcoded in Corefile instead of being dynamic or environment-variable-driven. |
+| **Proxy IP Hardcoded** | 🟡 Medium | [`proxy_ip 185.226.119.97`](dns-server/Corefile:13) — The proxy IP is hardcoded in Corefile instead of being dynamic or environment-variable-driven. |
 | **No upstream health checks** | 🟡 Medium | [`forward . 8.8.8.8 1.1.1.1 10.202.10.202`](dns-server/Corefile:27) — No health checks or `expire` tuning for upstream DNS servers. If 8.8.8.8 goes down, it's still tried. |
 | **Iranian DNS hardcoded** | 🟢 Low | `10.202.10.202` is a specific Iranian DNS that may not always be accessible or could be a point of censorship/failure. |
 | **No rate limiting on DNS queries** | 🟡 Medium | No `ratelimit` plugin configured, making the DNS server vulnerable to amplification attacks. |
