@@ -146,6 +146,11 @@ using (var scope = app.Services.CreateScope())
         logger.LogInformation("Pending migrations: {Count}", pending.Count());
         await db.Database.MigrateAsync();
         logger.LogInformation("Migrations applied successfully.");
+
+        // Seed database (admin user, gaming domains, plans)
+        logger.LogInformation("Seeding database...");
+        await AppDbContextSeed.SeedAsync(db);
+        logger.LogInformation("Database seeded successfully.");
     }
     catch (Exception ex)
     {
