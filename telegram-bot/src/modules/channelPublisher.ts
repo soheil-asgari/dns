@@ -23,9 +23,7 @@ const RSS_FEEDS = [
     'https://www.polygon.com/rss/index.xml',
     'https://dotesports.com/feed',
     'https://www.dexerto.com/feed',
-    'https://www.gamesradar.com/news/rss/',
     'https://www.videogameschronicle.com/feed/',
-    'https://n4g.com/news/feed/rss',
 ];
 
 // کلمات کلیدی اولویت بالا - اخبار این بازی‌ها اولویت دارن
@@ -284,15 +282,16 @@ export async function publishLatestGamingNews(bot: Telegraf<any>, redisClient: a
             ],
         ];
 
+        // Strip markdown chars to prevent Telegram parse errors from AI output
+        const cleanText = aiCaption.replace(/[*_~`>#+\-=|{}.!]/g, '');
+
         if (imageUrl) {
             await bot.telegram.sendPhoto(channelId, imageUrl, {
-                caption: aiCaption,
-                parse_mode: 'Markdown',
+                caption: cleanText,
                 reply_markup: { inline_keyboard: inlineKeyboard },
             });
         } else {
-            await bot.telegram.sendMessage(channelId, aiCaption, {
-                parse_mode: 'Markdown',
+            await bot.telegram.sendMessage(channelId, cleanText, {
                 reply_markup: { inline_keyboard: inlineKeyboard },
             });
         }
@@ -354,9 +353,13 @@ export async function publishDnsPromo(bot: Telegraf<any>) {
         ],
     ];
 
+    // Strip markdown to avoid Telegram parse errors from AI-generated text
+    const plainText = promo.text
+        .replace(/[*_~`>#+\-=|{}.!]/g, '')
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+
     await bot.telegram.sendPhoto(channelId, imageUrl, {
-        caption: promo.text,
-        parse_mode: 'Markdown',
+        caption: plainText,
         reply_markup: { inline_keyboard: inlineKeyboard },
     });
 
