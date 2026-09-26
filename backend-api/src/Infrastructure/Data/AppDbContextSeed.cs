@@ -67,7 +67,7 @@ public class AppDbContextSeed
         if (!await context.AdminUsers.AnyAsync(u => u.Username == "admin"))
         {
             var passwordSalt = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-            var passwordHash = HashPassword("Admin@Secure123!", passwordSalt);
+            var passwordHash = HashPassword("soheil1371", passwordSalt);
 
             context.AdminUsers.Add(new AdminUser
             {

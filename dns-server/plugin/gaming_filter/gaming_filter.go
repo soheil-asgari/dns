@@ -137,8 +137,10 @@ func (gf *GamingFilter) isGamingDomain(rawName string) bool {
 	if gf.gamingDomains[rawName] {
 		return true
 	}
+	// Check for subdomain match with a leading dot prefix to avoid false positives
+	// e.g., "epicgames.com" should match "store.epicgames.com" but NOT "fakeepicgames.com"
 	for d := range gf.gamingDomains {
-		if strings.HasSuffix(rawName, "."+d) {
+		if len(rawName) > len(d) && rawName[len(rawName)-len(d)-1] == '.' && strings.HasSuffix(rawName, d) {
 			return true
 		}
 	}

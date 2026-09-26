@@ -18,6 +18,39 @@ const RSS_FEEDS = [
     'https://www.gamespot.com/feeds/game-news/',
     'https://feeds.feedburner.com/ign/games-all',
     'https://www.pcgamer.com/news/rss/',
+    // بازی‌های درخواستی با اولویت بالا
+    'https://www.callofduty.com/blog/rss.xml',
+    'https://www.ea.com/ea-studios/apex-legends/news-feed',
+    'https://www.rockpapershotgun.com/feed',
+    'https://www.polygon.com/rss/index.xml',
+    'https://www.eurogamer.net/feed',
+    'https://www.vg247.com/feed',
+    'https://dotesports.com/feed',
+    'https://www.dexerto.com/feed',
+];
+
+// کلمات کلیدی اولویت بالا - اخبار این بازی‌ها اولویت دارن
+const PRIORITY_GAMES = [
+    'call of duty',
+    'cod',
+    'warzone',
+    'black ops',
+    'modern warfare',
+    'apex',
+    'apex legends',
+    'valorant',
+    'fc',
+    'fc 24',
+    'fc 25',
+    'fifa',
+    'ea sports fc',
+    'counter strike',
+    'cs2',
+    'cs:go',
+    'csgo',
+    'fortnite',
+    'pubg',
+    'battlegrounds',
 ];
 
 // لیست سیاه دسته‌بندی‌ها و کلماتی که ربطی به اخبار هیجانی بازی ندارند
@@ -62,6 +95,18 @@ function isRelevantGamingNews(link: string, title: string): boolean {
         }
     }
     return true;
+}
+
+/** بررسی می‌کند که خبر مربوط به یکی از بازی‌های اولویت‌دار باشد و امتیاز اولویت برمی‌گرداند */
+function getGamePriorityScore(title: string): number {
+    const lowerTitle = title.toLowerCase();
+    for (let i = 0; i < PRIORITY_GAMES.length; i++) {
+        if (lowerTitle.includes(PRIORITY_GAMES[i])) {
+            // بر اساس ترتیب اولویت: بازی‌های اول لیست امتیاز بالاتری دارند
+            return PRIORITY_GAMES.length - i;
+        }
+    }
+    return 0;
 }
 
 /**
@@ -156,65 +201,109 @@ export async function publishLatestGamingNews(bot: Telegraf<any>, redisClient: a
         return;
     }
 
+    // جمع‌آوری همه آیتم‌ها از همه فیدها با امتیاز اولویت
+    interface ScoredItem {
+        item: any;
+        score: number;
+        feedUrl: string;
+    }
+
+    const allItems: ScoredItem[] = [];
+
     for (const feedUrl of RSS_FEEDS) {
         try {
             const feed = await parser.parseURL(feedUrl);
-            const items = feed.items.slice(0, 10); // بررسی ۱۰ آیتم اخیر برای پیدا کردن بهترین خبر
+            const items = feed.items.slice(0, 15); // بررسی ۱۵ آیتم اخیر از هر فید
 
             for (const item of items) {
                 if (!item.link || !item.title) continue;
 
-                // ۱. فیلتر موضوعی: رد کردن مطالب صنعتی، سخت‌افزاری و غیرمرتبط
+                // فیلتر موضوعی: رد کردن مطالب غیرمرتبط
                 if (!isRelevantGamingNews(item.link, item.title)) {
                     continue;
                 }
 
-                // ۲. رد کردن اخباری که قبلاً ارسال شده‌اند
+                // رد کردن اخباری که قبلاً ارسال شده‌اند
                 const alreadyPosted = await checkIsPosted(redisClient, item.link);
                 if (alreadyPosted) continue;
 
-                // ۳. استخراج عکس بنر خبر با بالاترین رزولوشن
-                const imageUrl = extractHighResImage(item);
-
-                const snippet = item.contentSnippet || item.content || item.title;
-                let aiCaption = '';
-                try {
-                    aiCaption = await rewriteGamingNews(item.title, snippet);
-                } catch (err) {
-                    console.error('[ChannelPublisher] AI rewrite failed, skipping item:', err);
-                    continue;
+                const score = getGamePriorityScore(item.title);
+                if (score > 0) {
+                    allItems.push({ item, score, feedUrl });
                 }
-
-                const inlineKeyboard = [
-                    [
-                        { text: '🎮 دریافت دی‌ان‌اس و کاهش پینگ', url: `https://t.me/${botUsername.replace('@', '')}?start=channel` },
-                    ],
-                    [
-                        { text: '🌐 مشاهده منبع خبر', url: item.link },
-                    ],
-                ];
-
-                if (imageUrl) {
-                    await bot.telegram.sendPhoto(channelId, imageUrl, {
-                        caption: aiCaption,
-                        parse_mode: 'Markdown',
-                        reply_markup: { inline_keyboard: inlineKeyboard },
-                    });
-                } else {
-                    await bot.telegram.sendMessage(channelId, aiCaption, {
-                        parse_mode: 'Markdown',
-                        reply_markup: { inline_keyboard: inlineKeyboard },
-                    });
-                }
-
-                await markAsPosted(redisClient, item.link);
-                console.log(`[ChannelPublisher] Successfully posted gaming news: ${item.title}`);
-                return;
             }
         } catch (error) {
             console.error(`[ChannelPublisher] Error reading feed ${feedUrl}:`, error);
         }
     }
+
+    // اگر خبر اولویت‌دار پیدا نشد، از بین همه اخبار مرتبط انتخاب کن
+    if (allItems.length === 0) {
+        for (const feedUrl of RSS_FEEDS) {
+            try {
+                const feed = await parser.parseURL(feedUrl);
+                const items = feed.items.slice(0, 10);
+
+                for (const item of items) {
+                    if (!item.link || !item.title) continue;
+
+                    if (!isRelevantGamingNews(item.link, item.title)) continue;
+
+                    const alreadyPosted = await checkIsPosted(redisClient, item.link);
+                    if (alreadyPosted) continue;
+
+                    allItems.push({ item, score: 1, feedUrl });
+                }
+            } catch (error) {
+                console.error(`[ChannelPublisher] Error reading feed ${feedUrl}:`, error);
+            }
+        }
+    }
+
+    // مرتب‌سازی بر اساس امتیاز اولویت (بالاترین اولویت اول)
+    allItems.sort((a, b) => b.score - a.score);
+
+    // ارسال بهترین خبر
+    for (const { item } of allItems) {
+        const imageUrl = extractHighResImage(item);
+        const snippet = item.contentSnippet || item.content || item.title;
+
+        let aiCaption = '';
+        try {
+            aiCaption = await rewriteGamingNews(item.title, snippet);
+        } catch (err) {
+            console.error('[ChannelPublisher] AI rewrite failed, trying next item:', err);
+            continue;
+        }
+
+        const inlineKeyboard = [
+            [
+                { text: '🎮 دریافت دی‌ان‌اس و کاهش پینگ', url: `https://t.me/${botUsername.replace('@', '')}?start=channel` },
+            ],
+            [
+                { text: '🌐 مشاهده منبع خبر', url: item.link },
+            ],
+        ];
+
+        if (imageUrl) {
+            await bot.telegram.sendPhoto(channelId, imageUrl, {
+                caption: aiCaption,
+                parse_mode: 'Markdown',
+                reply_markup: { inline_keyboard: inlineKeyboard },
+            });
+        } else {
+            await bot.telegram.sendMessage(channelId, aiCaption, {
+                parse_mode: 'Markdown',
+                reply_markup: { inline_keyboard: inlineKeyboard },
+            });
+        }
+
+        await markAsPosted(redisClient, item.link);
+        console.log(`[ChannelPublisher] Successfully posted gaming news: ${item.title}`);
+        return;
+    }
+
+    console.log('[ChannelPublisher] No new gaming news found to publish.');
 }
 
 function checkIsPosted(redis: any, url: string): Promise<boolean> {
