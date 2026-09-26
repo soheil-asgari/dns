@@ -40,4 +40,5 @@ telegram-bot/dist/
 /logs/
 
 # Stray / temp
--p/
+-p/.token
+.token

@@ -1,36 +1,27 @@
 .:53 {
-    # reload 30s
     health
     prometheus :9153
-    
-    # فقط ارورها لاگ شوند تا پینگ دچار اسپایک نشود
     errors
-    
-    # پلاگین اختصاصی گیمینگ با رفرش ۵ ثانیه‌ای ردیس
+
     gaming_filter {
         redis_addr redis:6379
         refresh_interval 5s
         proxy_ip 185.226.119.97
     }
-    
-    # پاسخ سریع به کوئری‌های ANY
-    # any
-    
-    # کش بهینه با ترتیب صحیح پارامترها
-    cache 5 {
-        success 5
-        denial 5
-        prefetch 5 10m 30%
+
+    cache 3600 {
+        success 3600
+        denial 60
+        prefetch 10 2m 10%
     }
-    
-    # فوروارد بدون هلت‌چک ناپایدار همراه با DNS پشتیبان داخلی
-    forward . 8.8.8.8 1.1.1.1 10.202.10.202 {
-        max_concurrent 2000
-        expire 15m
+
+    forward . 8.8.8.8 1.1.1.1 9.9.9.9 {
+        policy round_robin
+        max_concurrent 4000
+        expire 10s
     }
 }
 
-# Health check / debug endpoint
 .:8053 {
     whoami
 }
