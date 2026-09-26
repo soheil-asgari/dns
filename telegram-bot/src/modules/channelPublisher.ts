@@ -20,13 +20,12 @@ const RSS_FEEDS = [
     'https://www.pcgamer.com/news/rss/',
     // بازی‌های درخواستی با اولویت بالا
     'https://www.callofduty.com/blog/rss.xml',
-    'https://www.ea.com/ea-studios/apex-legends/news-feed',
-    'https://www.rockpapershotgun.com/feed',
     'https://www.polygon.com/rss/index.xml',
-    'https://www.eurogamer.net/feed',
-    'https://www.vg247.com/feed',
     'https://dotesports.com/feed',
     'https://www.dexerto.com/feed',
+    'https://www.gamesradar.com/news/rss/',
+    'https://www.videogameschronicle.com/feed/',
+    'https://n4g.com/news/feed/rss',
 ];
 
 // کلمات کلیدی اولویت بالا - اخبار این بازی‌ها اولویت دارن
