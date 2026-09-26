@@ -11,6 +11,10 @@ export async function rewriteGamingNews(rawTitle: string, rawSnippet: string): P
 
 وظیفه: خبر خام انگلیسی که بهت داده می‌شه رو به فارسی روان، هیجانی و کاملاً گیمر-فرندلی بازنویسی کن.
 
+قوانین سخت:
+- اگر خبر ربطی به بازی‌های ویدیویی نداشت (مثل غذا، سیاست، ورزش، فیلم، سریال)، فقط کلمه "SKIP" را برگردان و هیچ چیز دیگر.
+- فقط روی اخبار بازی‌های: Call of Duty, Apex Legends, Valorant, FC/FIFA, Counter Strike, Fortnite, PUBG تمرکز کن.
+
 سبک نگارش:
 - یک تیتر جذاب و کوبنده با ایموجی‌های گیمینگ (🔥 🎮 ⚡ 🚀 🎯) در ابتدا
 - ۲-۳ پاراگراف کوتاه و چکشی یا بولت‌پوینت‌های تیز و بدون توضیح اضافه
@@ -47,7 +51,12 @@ export async function rewriteGamingNews(rawTitle: string, rawSnippet: string): P
     }
 
     const data: any = await response.json();
-    return data.choices[0]?.message?.content?.trim() || rawSnippet;
+    const content = data.choices[0]?.message?.content?.trim() || '';
+
+    // If AI says SKIP, return empty to signal non-gaming news
+    if (content === 'SKIP') return '';
+
+    return content || rawSnippet;
 }
 export async function generateDnsPromoCopy(): Promise<{ text: string; topic: string }> {
     const apiKey = process.env.GAPGPT_API_KEY;

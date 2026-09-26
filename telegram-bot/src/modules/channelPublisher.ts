@@ -17,12 +17,8 @@ const parser = new Parser({
 const RSS_FEEDS = [
     'https://www.gamespot.com/feeds/game-news/',
     'https://feeds.feedburner.com/ign/games-all',
-    'https://www.pcgamer.com/news/rss/',
-    // بازی‌های درخواستی با اولویت بالا
-    'https://www.callofduty.com/blog/rss.xml',
     'https://www.polygon.com/rss/index.xml',
     'https://dotesports.com/feed',
-    'https://www.dexerto.com/feed',
     'https://www.videogameschronicle.com/feed/',
 ];
 
@@ -63,6 +59,12 @@ const IGNORED_URL_PARTS = [
     'guide',
     'opinion',
     'deals',
+    'food',
+    'entertainment',
+    'lifestyle',
+    'sports',
+    'politics',
+    'business',
 ];
 
 // الگوهای query string که رزولوشن عکس رو پایین میارن
@@ -273,6 +275,12 @@ export async function publishLatestGamingNews(bot: Telegraf<any>, redisClient: a
             continue;
         }
 
+        // AI returned SKIP — this is not gaming-related content
+        if (!aiCaption) {
+            console.log(`[ChannelPublisher] AI skipped non-gaming news: ${item.title}`);
+            continue;
+        }
+
         const inlineKeyboard = [
             [
                 { text: '🎮 دریافت دی‌ان‌اس و کاهش پینگ', url: `https://t.me/${botUsername.replace('@', '')}?start=channel` },
@@ -285,15 +293,26 @@ export async function publishLatestGamingNews(bot: Telegraf<any>, redisClient: a
         // Strip markdown chars to prevent Telegram parse errors from AI output
         const cleanText = aiCaption.replace(/[*_~`>#+\-=|{}.!]/g, '');
 
-        if (imageUrl) {
-            await bot.telegram.sendPhoto(channelId, imageUrl, {
-                caption: cleanText,
-                reply_markup: { inline_keyboard: inlineKeyboard },
-            });
-        } else {
-            await bot.telegram.sendMessage(channelId, cleanText, {
-                reply_markup: { inline_keyboard: inlineKeyboard },
-            });
+        try {
+            if (imageUrl) {
+                await bot.telegram.sendPhoto(channelId, imageUrl, {
+                    caption: cleanText,
+                    reply_markup: { inline_keyboard: inlineKeyboard },
+                });
+            } else {
+                await bot.telegram.sendMessage(channelId, cleanText, {
+                    reply_markup: { inline_keyboard: inlineKeyboard },
+                });
+            }
+        } catch (sendErr: any) {
+            // If photo send fails (e.g. unreachable image URL), fallback to text-only
+            if (sendErr?.description?.includes('failed to get HTTP URL content') || sendErr?.description?.includes('IMAGE_PROCESS_FAILED')) {
+                await bot.telegram.sendMessage(channelId, cleanText, {
+                    reply_markup: { inline_keyboard: inlineKeyboard },
+                });
+            } else {
+                throw sendErr;
+            }
         }
 
         await markAsPosted(redisClient, item.link);
