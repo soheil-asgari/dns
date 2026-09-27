@@ -1,7 +1,7 @@
 FROM golang:1.21-alpine AS builder
 
-# استفاده از پراکسی پایدارتر و فعال‌سازی قابلیت‌های شبکه
-ENV GOPROXY=https://goproxy.cn,direct
+# Use reliable Go proxy
+ENV GOPROXY=https://proxy.golang.org,direct
 ENV GOSUMDB=off
 
 WORKDIR /src
