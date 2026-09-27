@@ -161,6 +161,20 @@ services:
     networks:
       - dns-net
 
+  # ============================================
+  # Node Exporter (host metrics monitoring)
+  # ============================================
+  node-exporter:
+    image: prom/node-exporter:latest
+    network_mode: host
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+    environment:
+      - NODE_ID=iran-dns
+    restart: unless-stopped
+
 networks:
   dns-net:
     driver: bridge

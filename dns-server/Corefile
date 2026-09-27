@@ -12,11 +12,13 @@
     cache 3600 {
         success 3600
         denial 60
-        prefetch 10 2m 10%
+        prefetch 30 30s 25%
+        serve_stale 1h
     }
 
-    forward . 8.8.8.8 1.1.1.1 9.9.9.9 {
-        policy round_robin
+    forward . 1.1.1.1 8.8.8.8 9.9.9.9 {
+        policy sequential
+        health_check 5s
         max_concurrent 4000
         expire 10s
     }

@@ -51,7 +51,8 @@ PostDown = nft delete rule ip filter FORWARD iifname ${SERVER_INTERFACE} accept 
 # NOTE: AllowedIPs intentionally limited to /32 for split-tunnel operation.
 # Only traffic destined to the Iran client's tunnel IP goes through WireGuard;
 # all other traffic (apt, system updates, etc.) uses the server's local internet.
-# Do NOT change to 0.0.0.0/0 unless you intend a full-VPN topology.
+# Do NOT change to 0.0.0.0/24 unless you intend a full-VPN topology.
+PersistentKeepalive = 20
 AllowedIPs = ${CLIENT_ALLOWED_IPS}
 EOF
 

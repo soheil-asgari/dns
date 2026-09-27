@@ -1,0 +1,13 @@
+[Unit]
+Description=Apply fq_codel qdisc on both active interfaces for low-latency gaming
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'tc qdisc replace dev eth1 root fq_codel 2>/dev/null; tc qdisc replace dev eth2 root fq_codel 2>/dev/null; echo "fq_codel applied to eth1 and eth2"'
+ExecStop=/bin/sh -c 'tc qdisc delete dev eth1 root 2>/dev/null; tc qdisc delete dev eth2 root 2>/dev/null; echo "fq_codel removed from eth1 and eth2"'
+
+[Install]
+WantedBy=multi-user.target

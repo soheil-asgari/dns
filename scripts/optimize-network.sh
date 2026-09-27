@@ -3,7 +3,7 @@
 # optimize-network.sh — System & Network Optimization for DNS / SNI Gaming
 # =============================================================================
 # Idempotent: safe to run multiple times.  Applies TCP BBR, low-latency tuning,
-# buffer increases, and iptables MSS clamping for WireGuard traffic.
+# buffer increases, iptables MSS clamping, UDP tuning, conntrack, QoS qdisc.
 # =============================================================================
 
 set -euo pipefail
@@ -39,6 +39,12 @@ net.core.rmem_max = 134217728
 net.core.wmem_max = 134217728
 
 # ----------------------------------------------------------------------
+# UDP buffer defaults (critical for gaming / DNS)
+# ----------------------------------------------------------------------
+net.core.rmem_default = 262144
+net.core.wmem_default = 262144
+
+# ----------------------------------------------------------------------
 # TCP auto-tuning buffer limits (min, default, max bytes)
 # ----------------------------------------------------------------------
 net.ipv4.tcp_rmem = 4096 87380 134217728
@@ -48,6 +54,43 @@ net.ipv4.tcp_wmem = 4096 65536 134217728
 # Enable TCP window scaling (RFC 1323) — almost always on by default
 # ----------------------------------------------------------------------
 net.ipv4.tcp_window_scaling = 1
+
+# ----------------------------------------------------------------------
+# Netdev / softirq tuning — more packets per interrupt
+# ----------------------------------------------------------------------
+net.core.netdev_budget = 600
+net.core.netdev_budget_usecs = 8000
+net.core.netdev_max_backlog = 5000
+
+# ----------------------------------------------------------------------
+# TCP MTU probing — avoid fragmentation over tunnels
+# ----------------------------------------------------------------------
+net.ipv4.tcp_mtu_probing = 1
+
+# ----------------------------------------------------------------------
+# Faster dead-connection detection
+# ----------------------------------------------------------------------
+net.ipv4.tcp_keepalive_time = 60
+net.ipv4.tcp_keepalive_intvl = 10
+net.ipv4.tcp_keepalive_probes = 3
+
+# ----------------------------------------------------------------------
+# Reduce TIME_WAIT impact
+# ----------------------------------------------------------------------
+net.ipv4.tcp_fin_timeout = 15
+
+# ----------------------------------------------------------------------
+# TCP NotSent Lowat — reduce send latency
+# ----------------------------------------------------------------------
+net.ipv4.tcp_notsent_lowat = 131072
+
+# ----------------------------------------------------------------------
+# Conntrack tuning — prevent table overflow under load
+# ----------------------------------------------------------------------
+net.netfilter.nf_conntrack_max = 262144
+net.netfilter.nf_conntrack_tcp_timeout_established = 432000
+net.netfilter.nf_conntrack_udp_timeout = 30
+net.netfilter.nf_conntrack_udp_timeout_stream = 120
 SYSCTL_EOF
 
 echo "[*] Applying sysctl settings ..."
@@ -68,6 +111,16 @@ if command -v netfilter-persistent &>/dev/null; then
 elif command -v iptables-save &>/dev/null; then
     mkdir -p /etc/iptables
     iptables-save > /etc/iptables/rules.v4 2>/dev/null || true
+fi
+
+# --------------------------------------------------------------------------
+# Apply fq_codel qdisc on main interface
+# --------------------------------------------------------------------------
+MAIN_IFACE=$(ip -4 route show default | awk '{print $5}' | head -1)
+if [[ -n "$MAIN_IFACE" ]]; then
+    echo "[*] Setting fq_codel qdisc on ${MAIN_IFACE} ..."
+    tc qdisc replace dev "${MAIN_IFACE}" root fq_codel 2>/dev/null || \
+        echo "[!] Could not set fq_codel on ${MAIN_IFACE} (might be virtual interface)."
 fi
 
 # --------------------------------------------------------------------------

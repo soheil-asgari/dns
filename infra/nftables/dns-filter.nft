@@ -11,12 +11,12 @@ table inet filter {
         # Allow loopback
         iif lo accept
         
-        # Allow SSH (port 22)
-        tcp dport 22 accept
+        # Allow SSH (port 2222)
+        tcp dport 2222 accept
         
-        # Allow DNS (TCP/UDP 53)
-        tcp dport 53 accept
-        udp dport 53 accept
+        # Allow DNS (TCP/UDP 53) with rate limit
+        tcp dport 53 ct state new limit rate 1000/second accept
+        udp dport 53 ct state new limit rate 1000/second accept
         
         # Allow DNS over HTTPS (8053)
         tcp dport 8053 accept
@@ -24,14 +24,20 @@ table inet filter {
         # Allow HTTP/HTTPS
         tcp dport {80, 443} accept
         
+        # Allow WireGuard
+        udp dport 51820 accept
+        
         # Allow HAProxy stats
         tcp dport 8404 accept
         
         # Allow Prometheus metrics
         tcp dport 9153 accept
         
-        # Allow ICMP (ping)
-        icmp type echo-request accept
+        # Allow ICMP (ping) on eth1
+        iif eth1 icmp type echo-request accept
+        
+        # Allow ICMP (ping) on eth2
+        iif eth2 icmp type echo-request accept
         
         # Log dropped packets
         log prefix "NFT_INPUT_DROP: " limit rate 10/minute
@@ -40,9 +46,15 @@ table inet filter {
     chain forward {
         type filter hook forward priority 0; policy drop;
         
-        # Allow forwarding for Docker/bridge networks
-        iif docker0 oif eth0 accept
-        iif eth0 oif docker0 ct state established,related accept
+        # Allow forwarding for Docker bridge & WireGuard
+        iifname "br-*" oifname "eth1" accept
+        iifname "br-*" oifname "eth2" accept
+        iifname "eth1" oifname "br-*" ct state established,related accept
+        iifname "eth2" oifname "br-*" ct state established,related accept
+        iifname "wg0" oifname "eth1" accept
+        iifname "wg0" oifname "eth2" accept
+        iifname "eth1" oifname "wg0" ct state established,related accept
+        iifname "eth2" oifname "wg0" ct state established,related accept
         
         log prefix "NFT_FWD_DROP: " limit rate 10/minute
     }
@@ -53,8 +65,8 @@ table inet filter {
 }
 
 # Gaming traffic optimization table
-table inet gaming {
-    chain priority {
+table inet gaming_opt {
+    chain prio_out {
         type filter hook output priority -200; policy accept
         
         # Prioritize gaming domain traffic
@@ -65,10 +77,14 @@ table inet gaming {
         tcp dport 53 meta mark set 0x1
     }
     
-    chain dscp {
+    chain dscp_mark {
         type filter hook output priority -150; policy accept
         
-        # Mark gaming traffic with DSCP CS4 (for QoS)
-        tcp dport {443, 80} ip dscp set 0x20
+        # Gaming traffic -> DSCP EF (46, 0x2E) — highest priority
+        tcp dport {443, 80} ip dscp set 0x2E
+        
+        # DNS -> DSCP AF21 (18, 0x12)
+        udp dport 53 ip dscp set 0x12
+        tcp dport 53 ip dscp set 0x12
     }
 }

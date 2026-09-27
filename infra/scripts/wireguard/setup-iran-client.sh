@@ -57,7 +57,9 @@ PostUp = nft add table ip filter 2>/dev/null; nft add chain ip filter FORWARD { 
 PublicKey = ${SERVER_PUBLIC_KEY}
 Endpoint = ${SERVER_ENDPOINT}
 AllowedIPs = ${ALLOWED_IPS}
-PersistentKeepalive = 25
+PersistentKeepalive = 20
+# MTU optimization: reduce from 1420 to 1412 to prevent packet fragmentation
+MTU = 1412
 EOF
 
 chmod 600 "$CLIENT_CONFIG"
