@@ -1,17 +1,14 @@
-FROM golang:1.21-alpine AS builder
+FROM golang:1.21 AS builder
 
-# Use reliable Go proxy
-ENV GOPROXY=https://proxy.golang.org,direct
+ENV GOPROXY=https://goproxy.cn,direct
 ENV GOSUMDB=off
+ENV GOFLAGS=-mod=mod
 
 WORKDIR /src
 COPY go.mod go.sum* ./
 COPY . .
 
-# Run tidy با حلقه تلاش مجدد (Retry) برای مقابله با قطعی‌های لحظه‌ای اینترنت
-RUN for i in 1 2 3 4 5; do go mod tidy && break || sleep 3; done
-
-# go generate reads plugin.cfg and produces/updates zdirectives.go
+# کامپایل مستقیم بدون وابستگی به پراکسی‌های خارجی
 RUN go generate ./...
 RUN CGO_ENABLED=0 go build -mod=mod -o /coredns ./cmd/coremain/
 

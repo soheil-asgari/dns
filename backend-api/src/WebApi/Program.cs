@@ -134,7 +134,7 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
 
-// Apply migrations and seed database on startup
+// Apply migrations on startup
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -146,16 +146,28 @@ using (var scope = app.Services.CreateScope())
         logger.LogInformation("Pending migrations: {Count}", pending.Count());
         await db.Database.MigrateAsync();
         logger.LogInformation("Migrations applied successfully.");
-
-        // Seed database (admin user, gaming domains, plans)
-        logger.LogInformation("Seeding database...");
-        await AppDbContextSeed.SeedAsync(db);
-        logger.LogInformation("Database seeded successfully.");
     }
     catch (Exception ex)
     {
         // Prevent crash if migration fails (e.g. tables already exist on an existing database).
         logger.LogWarning(ex, "Migration warning: schema might already be up to date. Proceeding without crashing.");
+    }
+}
+
+// Seed database in a separate try/catch so migration errors don't mask seed errors
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    try
+    {
+        logger.LogInformation("Seeding database (admin user, gaming domains, plans)...");
+        await AppDbContextSeed.SeedAsync(db);
+        logger.LogInformation("Database seeded successfully.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Database seeding FAILED. Admin user may not exist — login will not work until seeding succeeds.");
     }
 }
 

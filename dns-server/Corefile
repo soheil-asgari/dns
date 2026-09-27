@@ -6,7 +6,7 @@
     gaming_filter {
         redis_addr redis:6379
         refresh_interval 5s
-        proxy_ip 185.226.119.97
+        proxy_ip 10.10.0.1
     }
 
     cache 3600 {
@@ -17,7 +17,7 @@
     }
 
     forward . 1.1.1.1 8.8.8.8 9.9.9.9 {
-        policy sequential
+        policy random
         health_check 5s
         max_concurrent 4000
         expire 10s

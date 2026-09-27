@@ -113,7 +113,7 @@ func (gf *GamingFilter) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 			Name:   state.QName(),
 			Rrtype: dns.TypeA,
 			Class:  dns.ClassINET,
-			Ttl:    300,
+			Ttl:    60,
 		}
 		rr.A = net.ParseIP(gf.proxyIP)
 

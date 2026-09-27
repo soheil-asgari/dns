@@ -1,13 +1,11 @@
 FROM node:20-alpine AS build
 WORKDIR /app
-COPY package*.json .npmrc* ./
-RUN npm config set strict-ssl false
 
-# Install TypeScript globally
-RUN npm install -g typescript
+COPY package*.json ./
 
-# ۲. اطمینان از نصب تمام پکیج‌های توسعه‌دهنده (devDependencies)
-RUN if [ -f package-lock.json ]; then npm ci --legacy-peer-deps --include=dev; else npm install --legacy-peer-deps --include=dev; fi
+# نصب تایپ‌اسکریپت و وابستگی‌ها منحصراً از مخزن ابرها
+RUN npm install -g typescript --registry="https://mirror.abrha.net/repository/npm/" --strict-ssl=false && \
+    npm install --legacy-peer-deps --registry="https://mirror.abrha.net/repository/npm/" --strict-ssl=false
 
 COPY . .
 RUN npm run build

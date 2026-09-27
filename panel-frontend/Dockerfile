@@ -1,8 +1,13 @@
 FROM node:20-alpine AS build
 WORKDIR /app
-COPY package*.json ./
-RUN npm config set strict-ssl false
-RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+COPY package*.json .npmrc* ./
+RUN npm config set strict-ssl false && \
+    npm config set registry https://registry.npmjs.org/ && \
+    if [ -f package-lock.json ]; then \
+      npm ci --prefer-offline; \
+    else \
+      npm install --prefer-offline; \
+    fi
 COPY . .
 RUN npm run build
 
