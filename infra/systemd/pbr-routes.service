@@ -1,0 +1,29 @@
+[Unit]
+Description=Persistent Policy-Based Routing for dual-NIC (eth1/eth2)
+After=network-online.target
+Wants=network-online.target
+Before=nftables.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c ' \
+  ip link set eth1 up 2>/dev/null; \
+  ip route add 185.226.116.0/22 dev eth1 src 185.226.117.62 table 101 2>/dev/null || true; \
+  ip route add default via 185.226.116.1 dev eth1 table 101 2>/dev/null || true; \
+  ip rule add from 185.226.117.62 lookup 101 2>/dev/null || true; \
+  ip route add 185.226.116.0/22 dev eth2 src 185.226.119.97 table 102 2>/dev/null || true; \
+  ip route add default via 185.226.116.1 dev eth2 table 102 2>/dev/null || true; \
+  ip rule add from 185.226.119.97 lookup 102 2>/dev/null || true; \
+  echo "PBR tables 101 (eth1) and 102 (eth2) configured"; \
+'
+ExecStop=/bin/sh -c ' \
+  ip rule del from 185.226.117.62 2>/dev/null || true; \
+  ip rule del from 185.226.119.97 2>/dev/null || true; \
+  ip route flush table 101 2>/dev/null || true; \
+  ip route flush table 102 2>/dev/null || true; \
+  echo "PBR rules and routes flushed"; \
+'
+
+[Install]
+WantedBy=multi-user.target
