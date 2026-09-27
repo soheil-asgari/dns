@@ -119,8 +119,8 @@ cat << 'EOF' > "$INSTALL_DIR/dns-server/Corefile"
         prefetch 10 2m 10%
     }
 
-    forward . 8.8.8.8 1.1.1.1 9.9.9.9 {
-        policy round_robin
+    forward . 172.20.0.11 1.1.1.1 8.8.8.8 9.9.9.9 {
+        policy sequential
         max_concurrent 4000
         expire 10s
     }
@@ -193,15 +193,35 @@ services:
     networks:
       - net
 
+  unbound:
+    build:
+      context: ./dns-server/unbound
+      dockerfile: Dockerfile
+    restart: always
+    healthcheck:
+      test: ["CMD", "nslookup", "example.com", "127.0.0.1"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 90s
+    networks:
+      net:
+        ipv4_address: 172.20.0.11
+
   coredns:
-    image: coredns/coredns:latest
+    build:
+      context: ./dns-server
+      dockerfile: Dockerfile
     container_name: dns-infra-coredns-1
     restart: always
     volumes:
       - ./dns-server:/root/dns-server
     command: -conf /root/dns-server/Corefile
     depends_on:
-      - redis
+      redis:
+        condition: service_started
+      unbound:
+        condition: service_started
     ports:
       - "53:53/udp"
       - "53:53/tcp"
@@ -225,22 +245,18 @@ services:
 networks:
   net:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
 EOF
 
-# 8. Start Services and Populate Redis with Domains
+# 8. Start Services; backend-api owns JSON serialization for Redis domain data
 echo "[+] Starting Docker containers..."
 docker compose up -d
 
-echo "[+] Waiting for Redis to initialize..."
-sleep 3
-
-echo "[+] Populating Redis with optimized anti-censorship and gaming domains..."
-DOMAINS_JSON='["gemini.google.com","cod.cdn.activision.com","atvi-cdn.callofduty.com","cdn.callofduty.com","manifest.callofduty.com","auth.callofduty.com","profile.callofduty.com","uno.atvi.com","cod-assets.cdn.callofduty.com","prod.cdni.callofduty.com","telescope.callofduty.com","ingest.datax.activision.com","objectstore-cloud-prod-sat.egcp.demonware.net","user-consent.prod.demonware.net","delivery.mp.microsoft.com","dl.delivery.mp.microsoft.com","titlestorage.xboxlive.com","blob.core.windows.net","titlestorageeus20101.blob.core.windows.net","displaycatalog.mp.microsoft.com","licensing.mp.microsoft.com","payment.microsoft.com","purchase.mp.microsoft.com","billing.microsoft.com","xbl-status.live.com","battle.net","blizzard.com","battlenet.com","us.patch.battle.net","eu.patch.battle.net","discord.com","discordapp.com","discord.gg","steampowered.com","steamcommunity.com","epicgames.com","ea.com","ubisoft.com","riotgames.com"]'
-
-docker compose exec -T redis redis-cli HSET DNSgaming:domains data "$DOMAINS_JSON"
-
-echo "[+] Restarting CoreDNS to load domains..."
-docker compose restart coredns
+echo "[+] Domain-list Redis writes are managed by backend-api SyncToRedisAsync."
+echo "[+] This minimal install does not write DNSgaming:domains directly."
 
 echo "===================================================="
 echo "    Installation Completed Successfully!            "

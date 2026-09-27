@@ -1,0 +1,52 @@
+#!/usr/sbin/nft -f
+
+# Germany exit-node nftables rules.
+# Restricts DNS (port 53) to the WireGuard tunnel interface only.
+table inet filter {
+    chain input {
+        type filter hook input priority 0; policy drop;
+
+        # Allow established connections
+        ct state established,related accept
+
+        # Allow loopback
+        iif lo accept
+
+        # Allow SSH (custom port — adjust as needed)
+        tcp dport 2222 accept
+
+        # Allow DNS (TCP/UDP 53) — ONLY on wg0 (WireGuard tunnel)
+        iifname "wg0" tcp dport 53 accept
+        iifname "wg0" udp dport 53 accept
+
+        # Explicitly drop DNS on any other interface — no open resolver
+        tcp dport 53 drop
+        udp dport 53 drop
+
+        # Allow HTTP/HTTPS (for sniproxy)
+        tcp dport {80, 443} accept
+
+        # Allow WireGuard itself
+        udp dport 51820 accept
+
+        # Allow ICMP ping
+        icmp type echo-request accept
+
+        # Log dropped packets (rate-limited)
+        log prefix "GER_NFT_INPUT_DROP: " limit rate 10/minute
+    }
+
+    chain forward {
+        type filter hook forward priority 0; policy drop;
+
+        # Allow forwarding for WireGuard tunnel
+        iifname "wg0" oifname $(ip route get 8.8.8.8 | awk '{print $5; exit}') accept
+        iifname $(ip route get 8.8.8.8 | awk '{print $5; exit}') oifname "wg0" ct state established,related accept
+
+        log prefix "GER_NFT_FWD_DROP: " limit rate 10/minute
+    }
+
+    chain output {
+        type filter hook output priority 0; policy accept
+    }
+}

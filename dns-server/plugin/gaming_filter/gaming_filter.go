@@ -80,7 +80,7 @@ func (gf *GamingFilter) updateDomains() {
 		// Fallback: try to unmarshal as a wrapper object { "data": [...], "last_updated": "..." }
 		var wrapped wrappedPayload
 		if err2 := json.Unmarshal([]byte(val), &wrapped); err2 != nil {
-			log.Errorf("[gaming_filter] JSON unmarshal error for value '%s': %v (also tried wrapper: %v)", val, err, err2)
+			log.Errorf("[gaming_filter] MALFORMED_DOMAIN_DATA key=DNSgaming:domains field=data; keeping previous cache; json_error=%v; wrapper_error=%v", err, err2)
 			return
 		}
 		domains = wrapped.Data

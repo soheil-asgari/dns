@@ -1,24 +1,41 @@
-version: '3.8'
-
-name: dns-infra-prod
-
 services:
   coredns:
-    image: coredns/coredns:latest
+    build:
+      context: ./dns-server
+      dockerfile: Dockerfile
     ports:
       - "53:53/udp"
       - "53:53/tcp"
     volumes:
       - ./dns-server/Corefile:/etc/coredns/Corefile:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      unbound:
+        condition: service_healthy
+    restart: unless-stopped
     deploy:
-      replicas: 2
       resources:
         limits:
           cpus: '0.5'
           memory: 256M
-    configs:
-      - source: corefile
-        target: /etc/coredns/Corefile
+    networks:
+      - dns-net
+
+  unbound:
+    build:
+      context: ./dns-server/unbound
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nslookup", "example.com", "127.0.0.1"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 90s
+    networks:
+      dns-net:
+        ipv4_address: 172.20.0.11
 
   haproxy:
     image: haproxy:2.8-alpine
@@ -30,21 +47,37 @@ services:
       - /etc/ssl/certs:/etc/ssl/certs:ro
       - haproxy_shared:/usr/local/etc/haproxy:rw
     deploy:
-      replicas: 2
       resources:
         limits:
           cpus: '0.5'
           memory: 256M
+    networks:
+      - dns-net
 
   redis:
     image: redis:7-alpine
     volumes:
       - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     deploy:
       resources:
         limits:
           cpus: '0.3'
           memory: 128M
+    networks:
+      - dns-net
+
+networks:
+  dns-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
 
 volumes:
   redis-data:

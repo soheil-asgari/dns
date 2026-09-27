@@ -17,12 +17,30 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      unbound:
+        condition: service_started
     restart: unless-stopped
     networks:
       dns-net:
         ipv4_address: 172.20.0.10
         aliases:
           - dns-server
+
+  # Iterative recursive resolver; uses Unbound's compiled-in root hints.
+  unbound:
+    build:
+      context: ./dns-server/unbound
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nslookup", "example.com", "127.0.0.1"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 90s
+    networks:
+      dns-net:
+        ipv4_address: 172.20.0.11
 
   # ============================================
   # HAProxy (optional for local testing)
