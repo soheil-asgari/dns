@@ -20,12 +20,6 @@ public class DomainDiscoveryController : ControllerBase
         _logger = logger;
     }
 
-    public class CrtShEntry
-    {
-        [JsonPropertyName("name_value")]
-        public string? NameValue { get; set; }
-    }
-
     public class SubdomainDiscoveryResponse
     {
         public string Domain { get; set; } = string.Empty;
@@ -34,35 +28,23 @@ public class DomainDiscoveryController : ControllerBase
     }
 
     /// <summary>
-    /// Discovers subdomains for a given domain using Certificate Transparency logs (crt.sh).
+    /// Discovers subdomains for a given domain using HackerTarget API.
     /// </summary>
-    /// <param name="domain">The domain to discover subdomains for (e.g., example.com).</param>
-    /// <param name="limit">Maximum number of subdomains to return (default: 100).</param>
     [HttpGet("subdomains")]
     public async Task<IActionResult> DiscoverSubdomains([FromQuery] string domain, [FromQuery] int limit = 100)
     {
         if (string.IsNullOrWhiteSpace(domain))
             return BadRequest(new { error = "Domain parameter is required." });
 
-        // Basic domain validation
         domain = domain.Trim().ToLower();
         if (domain.Contains("://") || domain.Contains(' ') || !domain.Contains('.'))
             return BadRequest(new { error = "Invalid domain format." });
 
         try
         {
-            var client = _httpClientFactory.CreateClient("crtSh");
-            var url = $"https://crt.sh/?q=%25.{WebUtility.UrlEncode(domain)}&output=json";
-            
-            _logger.LogInformation("Querying crt.sh for subdomains of {Domain}: {Url}", domain, url);
+            var subdomains = await TryHackerTargetAsync(domain);
 
-            using var response = await client.GetAsync(url, HttpCompletionOption.ResponseContentRead);
-            response.EnsureSuccessStatusCode();
-
-            var json = await response.Content.ReadAsStringAsync();
-
-            var entries = JsonSerializer.Deserialize<List<CrtShEntry>>(json);
-            if (entries == null || entries.Count == 0)
+            if (subdomains == null || subdomains.Count == 0)
             {
                 return Ok(new SubdomainDiscoveryResponse
                 {
@@ -72,34 +54,8 @@ public class DomainDiscoveryController : ControllerBase
                 });
             }
 
-            var subdomains = new HashSet<string>();
-
-            foreach (var entry in entries)
-            {
-                if (string.IsNullOrWhiteSpace(entry.NameValue))
-                    continue;
-
-                // Split multi-line certificate entries
-                var parts = entry.NameValue.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                foreach (var part in parts)
-                {
-                    var clean = part.Trim().ToLower();
-
-                    // Remove wildcard prefix (*.)
-                    if (clean.StartsWith("*."))
-                        clean = clean[2..];
-
-                    // Ensure it ends with the target domain
-                    if (!clean.EndsWith($".{domain}") && clean != domain)
-                        continue;
-
-                    subdomains.Add(clean);
-                }
-            }
-
-            // Sort and limit results
             var sorted = subdomains
-                .Where(s => s != domain) // exclude the root domain itself
+                .Where(s => s != domain)
                 .OrderBy(s => s)
                 .Take(limit)
                 .ToArray();
@@ -113,18 +69,52 @@ public class DomainDiscoveryController : ControllerBase
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "HTTP error querying crt.sh for domain {Domain}", domain);
-            return StatusCode(502, new { error = "Failed to query certificate transparency logs.", detail = ex.Message });
+            _logger.LogError(ex, "HTTP error querying HackerTarget for domain {Domain}", domain);
+            return StatusCode(502, new { error = "Failed to query subdomain discovery service.", detail = ex.Message });
         }
         catch (TaskCanceledException)
         {
-            _logger.LogWarning("Request to crt.sh timed out for domain {Domain}", domain);
-            return StatusCode(504, new { error = "Request to certificate transparency logs timed out." });
+            _logger.LogWarning("Request to HackerTarget timed out for domain {Domain}", domain);
+            return StatusCode(504, new { error = "Request to subdomain discovery service timed out." });
         }
-        catch (JsonException ex)
+        catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to parse crt.sh response for domain {Domain}", domain);
-            return StatusCode(502, new { error = "Invalid response from certificate transparency logs." });
+            _logger.LogError(ex, "Unexpected error discovering subdomains for {Domain}", domain);
+            return StatusCode(500, new { error = "Internal server error during subdomain discovery." });
         }
+    }
+
+    /// <summary>
+    /// Queries HackerTarget hostsearch API which returns CSV: subdomain,ip
+    /// </summary>
+    private async Task<HashSet<string>?> TryHackerTargetAsync(string domain)
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        var client = _httpClientFactory.CreateClient("hackertarget");
+        var url = $"https://api.hackertarget.com/hostsearch/?q={WebUtility.UrlEncode(domain)}";
+
+        _logger.LogInformation("Querying HackerTarget for subdomains of {Domain}", domain);
+
+        using var response = await client.GetAsync(url, HttpCompletionOption.ResponseContentRead, cts.Token);
+        response.EnsureSuccessStatusCode();
+
+        var body = await response.Content.ReadAsStringAsync(cts.Token);
+        var subdomains = new HashSet<string>();
+
+        foreach (var line in body.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var parts = line.Split(',');
+            if (parts.Length == 0) continue;
+
+            var clean = parts[0].Trim().ToLower();
+            if (string.IsNullOrEmpty(clean)) continue;
+
+            // Only keep subdomains that actually belong to this domain
+            if (clean == domain || clean.EndsWith($".{domain}"))
+                subdomains.Add(clean);
+        }
+
+        _logger.LogInformation("HackerTarget found {Count} subdomains for {Domain}", subdomains.Count, domain);
+        return subdomains;
     }
 }

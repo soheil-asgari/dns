@@ -11,6 +11,7 @@ export default function DnsRecords() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<DnsRecord | null>(null);
   const [form, setForm] = useState({ domain: '', recordType: 'A', value: '', ttl: 3600, isActive: true });
+  const [multiValue, setMultiValue] = useState<string[]>(['']);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -33,6 +34,7 @@ export default function DnsRecords() {
   const openAddModal = () => {
     setEditingRecord(null);
     setForm({ domain: '', recordType: 'A', value: '', ttl: 3600, isActive: true });
+    setMultiValue(['']);
     setIsModalOpen(true);
   };
 
@@ -45,12 +47,18 @@ export default function DnsRecords() {
       ttl: record.ttl,
       isActive: record.isActive,
     });
+    setMultiValue(['']);
     setIsModalOpen(true);
   };
 
   const handleSave = async () => {
-    if (!form.domain || !form.value) {
-      showToast('Domain and Value are required', 'error');
+    if (!form.domain) {
+      showToast('Domain is required', 'error');
+      return;
+    }
+    const values = editingRecord ? [form.value] : multiValue.filter(v => v.trim());
+    if (values.length === 0) {
+      showToast('At least one value is required', 'error');
       return;
     }
     setSaving(true);
@@ -59,12 +67,15 @@ export default function DnsRecords() {
         const res = await dnsApi.updateRecord(editingRecord.id, form);
         updateRecord(editingRecord.id, res.data);
         showToast('Record updated successfully', 'success');
+        setIsModalOpen(false);
       } else {
-        const res = await dnsApi.createRecord(form);
-        addRecord(res.data);
-        showToast('Record created successfully', 'success');
+        for (const val of values) {
+          const res = await dnsApi.createRecord({ ...form, value: val.trim() });
+          addRecord(res.data);
+        }
+        showToast(`${values.length} record(s) created successfully`, 'success');
+        setIsModalOpen(false);
       }
-      setIsModalOpen(false);
     } catch (err: any) {
       console.error('Save failed', err);
       showToast(err?.response?.data?.message || 'Failed to save record', 'error');
@@ -231,16 +242,60 @@ export default function DnsRecords() {
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm text-slate-400 mb-1">Value</label>
-                <input
-                  type="text"
-                  className="input w-full"
-                  placeholder="192.168.1.1"
-                  value={form.value}
-                  onChange={(e) => setForm({ ...form, value: e.target.value })}
-                />
-              </div>
+
+              {editingRecord ? (
+                <div>
+                  <label className="block text-sm text-slate-400 mb-1">Value</label>
+                  <input
+                    type="text"
+                    className="input w-full"
+                    placeholder="192.168.1.1"
+                    value={form.value}
+                    onChange={(e) => setForm({ ...form, value: e.target.value })}
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm text-slate-400 mb-1">
+                    Values (one per line, for multiple IPs)
+                  </label>
+                  <div className="space-y-2">
+                    {multiValue.map((v, i) => (
+                      <div key={i} className="flex gap-2">
+                        <input
+                          type="text"
+                          className="input flex-1"
+                          placeholder={i === 0 ? "192.168.1.1" : "192.168.1.2"}
+                          value={v}
+                          onChange={(e) => {
+                            const next = [...multiValue];
+                            next[i] = e.target.value;
+                            setMultiValue(next);
+                          }}
+                        />
+                        {multiValue.length > 1 && (
+                          <button
+                            type="button"
+                            className="px-2 py-1 text-red-400 hover:bg-red-700/50 rounded transition-colors"
+                            onClick={() => {
+                              setMultiValue(multiValue.filter((_, idx) => idx !== i));
+                            }}
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+                      onClick={() => setMultiValue([...multiValue, ''])}
+                    >
+                      + Add another IP
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"

@@ -99,8 +99,8 @@ builder.Services.AddHostedService<Infrastructure.BackgroundServices.HaproxyAclSy
 // ZarinPal payment gateway (creates its own HttpClient with WAF-friendly TLS config)
 builder.Services.AddScoped<ZarinPalPaymentService>();
 
-// Certificate Transparency (crt.sh) for subdomain discovery
-builder.Services.AddHttpClient("crtSh", client =>
+// Subdomain discovery via HackerTarget API
+builder.Services.AddHttpClient("hackertarget", client =>
 {
     client.Timeout = TimeSpan.FromSeconds(15);
     client.DefaultRequestHeaders.UserAgent.ParseAdd("DnsPanel/1.0");
