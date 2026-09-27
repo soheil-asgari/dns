@@ -1,19 +1,21 @@
 FROM golang:1.21-alpine AS builder
 
-ENV GOPROXY=https://goproxy.io,direct
+# استفاده از پراکسی پایدارتر و فعال‌سازی قابلیت‌های شبکه
+ENV GOPROXY=https://goproxy.cn,direct
 ENV GOSUMDB=off
 
 WORKDIR /src
 COPY go.mod go.sum* ./
 COPY . .
-# Run tidy with source code present to resolve imports and populate go.sum
-RUN go mod tidy
+
+# Run tidy با حلقه تلاش مجدد (Retry) برای مقابله با قطعی‌های لحظه‌ای اینترنت
+RUN for i in 1 2 3 4 5; do go mod tidy && break || sleep 3; done
+
 # go generate reads plugin.cfg and produces/updates zdirectives.go
 RUN go generate ./...
 RUN CGO_ENABLED=0 go build -mod=mod -o /coredns ./cmd/coremain/
 
 FROM alpine:3.19
-# اضافه کردن حلقه تلاش مجدد (Retry) برای عبور از خطاهای موقتی اینترنت
 RUN for i in 1 2 3 4 5; do apk --no-cache add ca-certificates && break || sleep 3; done
 
 COPY --from=builder /coredns /usr/local/bin/coredns
