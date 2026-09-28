@@ -1,0 +1,12 @@
+[Unit]
+Description=Policy routing marks for dual-IP DNS replies
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/pbr-apply.sh
+
+[Install]
+WantedBy=multi-user.target
