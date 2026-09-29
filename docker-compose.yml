@@ -74,11 +74,18 @@ services:
       dockerfile: Dockerfile
     extra_hosts:
       - "api.telegram.org:10.10.0.1"
+    # Resolve external names via CoreDNS (which forwards through the WireGuard
+    # tunnel). The host's Docker embedded resolver can come up with invalid
+    # upstreams, which made outbound HTTPS (e.g. HackerTarget) fail with 502.
+    dns:
+      - 172.20.0.10
+      - 178.22.122.100
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://0.0.0.0:8080
       ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=DnsServiceDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True"
       ConnectionStrings__Redis: "redis:6379"
+      HMAC_SECRET: ${HMAC_SECRET:-RhynoDns_Secure_HMAC_Secret_Key_2026_!@#}
     ports:
       - "8080:8080"
     volumes:
@@ -101,6 +108,10 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3000:80"
+    volumes:
+      # Read-only access to the Let's Encrypt certificate issued for dns.rhynoai.ir.
+      # Nginx terminates TLS on internal port 8443 (HAProxy does SNI passthrough).
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - backend-api
     restart: unless-stopped
@@ -116,6 +127,10 @@ services:
       dockerfile: Dockerfile
     extra_hosts:
       - "api.telegram.org:10.10.0.1"
+    dns:
+      - 178.22.122.100
+      - 185.51.200.2
+      - 172.20.0.10
     env_file:
       - .env
     environment:
@@ -128,6 +143,8 @@ services:
       GAPGPT_API_KEY: ${GAPGPT_API_KEY:-}
       GAPGPT_BASE_URL: ${GAPGPT_BASE_URL:-https://api.gapgpt.app/v1}
       GAPGPT_MODEL: ${GAPGPT_MODEL:-gpt-5.6-luna}
+      HMAC_SECRET: ${HMAC_SECRET:-}
+      PORTAL_PUBLIC_URL: ${PORTAL_PUBLIC_URL:-https://dns.rhynoai.ir}
       LOG_LEVEL: debug
     ports:
       - "5000:5000"
