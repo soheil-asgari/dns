@@ -75,7 +75,8 @@ public class AppDbContextSeed
                 Username = "admin",
                 PasswordHash = passwordHash,
                 PasswordSalt = passwordSalt,
-                Role = "Admin"
+                Role = "SuperAdmin",
+                Permissions = "all"
             });
         }
 

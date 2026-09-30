@@ -21,7 +21,6 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('auth_token');
-      // Only redirect if not already on login page
       if (!window.location.pathname.startsWith('/login')) {
         window.location.href = '/login';
       }
@@ -67,6 +66,45 @@ export interface SubdomainDiscoveryResult {
   subdomains: string[];
 }
 
+export interface AdminStats {
+  totalUsers: number;
+  activeSubscriptions: number;
+  totalPaidSubscriptions: number;
+  trialSubscriptions: number;
+  totalRevenue: number;
+  totalTransactions: number;
+  successfulTransactions: number;
+  usersWithIp: number;
+}
+
+export interface UserInfo {
+  id: string;
+  telegramId: number;
+  username: string | null;
+  firstName: string | null;
+  createdAt: string;
+  subscriptions: any[];
+  activeSubscription: any;
+  hasPurchased: boolean;
+  transactions: any[];
+}
+
+export interface BotAdmin {
+  id: string;
+  username: string;
+  role: string;
+  permissions: string;
+  createdAt: string;
+}
+
+export const settingsApi = {
+  getBotToken: () => api.get('/settings/bot-token'),
+  updateBotToken: (token: string) => api.put('/settings/bot-token', { token }),
+  testBotToken: (token: string) => api.post('/settings/bot-token/test', { token }),
+  getBotAdminIds: () => api.get<{ adminIds: number[] }>('/settings/bot-admin-ids'),
+  updateBotAdminIds: (adminIds: number[]) => api.put('/settings/bot-admin-ids', { adminIds }),
+};
+
 export const dnsApi = {
   resolve: (domain: string) => api.get(`/dns/resolve/${domain}`),
   getGamingDomains: () => api.get<GamingDomain[]>('/dns/gaming-domains'),
@@ -77,6 +115,20 @@ export const dnsApi = {
   updateRecord: (id: string, record: Partial<DnsRecord>) => api.put<DnsRecord>(`/dns/records/${id}`, record),
   deleteRecord: (id: string) => api.delete(`/dns/records/${id}`),
   discoverSubdomains: (domain: string) => api.get<SubdomainDiscoveryResult>('/DomainDiscovery/subdomains', { params: { domain } }),
+};
+
+export const adminApi = {
+  getStats: () => api.get<AdminStats>('/admin/stats'),
+  getUsers: (page = 1, pageSize = 20, search?: string) =>
+    api.get<{ users: UserInfo[]; total: number; page: number; pageSize: number }>('/admin/users', { params: { page, pageSize, search } }),
+  getUser: (telegramId: number) => api.get(`/admin/users/${telegramId}`),
+  addCredit: (telegramId: number, days: number) => api.post(`/admin/users/${telegramId}/add-credit`, { days }),
+  getBotAdmins: () => api.get<{ admins: BotAdmin[] }>('/admin/bot-admins'),
+  createBotAdmin: (data: { username: string; password: string; role?: string; permissions?: string }) =>
+    api.post('/admin/bot-admins', data),
+  updateBotAdmin: (id: string, data: { role?: string; permissions?: string }) =>
+    api.put(`/admin/bot-admins/${id}`, data),
+  deleteBotAdmin: (id: string) => api.delete(`/admin/bot-admins/${id}`),
 };
 
 export default api;

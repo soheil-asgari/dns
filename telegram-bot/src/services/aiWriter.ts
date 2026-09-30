@@ -81,7 +81,7 @@ export async function generateDnsPromoCopy(): Promise<{ text: string; topic: str
         },
         {
             name: 'free_trial',
-            prompt: 'معرفی تست ۲۴ ساعته کاملاً رایگان سرویس راینو برای تست قبل از خرید، سرورهای اختصاصی و پرسرعت آلمان',
+            prompt: 'معرفی تست ۲۴ ساعته کاملاً رایگان سرویس راینو برای تست قبل از خرید، سرورهای اختصاصی و پرسرعت  ',
         },
     ];
 

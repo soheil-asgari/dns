@@ -25,6 +25,43 @@ public class SettingsController : ControllerBase
     }
 
     /// <summary>
+    /// Get bot admin telegram IDs stored in system settings.
+    /// </summary>
+    [HttpGet("bot-admin-ids")]
+    public async Task<IActionResult> GetBotAdminIds()
+    {
+        var setting = await _db.SystemSettings.FindAsync("bot_admin_ids");
+        var ids = setting?.Value ?? string.Empty;
+        var list = string.IsNullOrWhiteSpace(ids)
+            ? new List<long>()
+            : ids.Split(',').Select(s => { long.TryParse(s.Trim(), out var id); return id; }).Where(id => id > 0).ToList();
+
+        return Ok(new { adminIds = list });
+    }
+
+    /// <summary>
+    /// Update bot admin telegram IDs.
+    /// </summary>
+    [HttpPut("bot-admin-ids")]
+    public async Task<IActionResult> UpdateBotAdminIds([FromBody] UpdateBotAdminIdsRequest request)
+    {
+        var ids = string.Join(",", request.AdminIds.Where(id => id > 0).Distinct());
+        var setting = await _db.SystemSettings.FindAsync("bot_admin_ids");
+        if (setting == null)
+        {
+            setting = new SystemSetting { Key = "bot_admin_ids", Value = ids };
+            _db.SystemSettings.Add(setting);
+        }
+        else
+        {
+            setting.Value = ids;
+            setting.UpdatedAt = DateTime.UtcNow;
+        }
+        await _db.SaveChangesAsync();
+        return Ok(new { adminIds = request.AdminIds.Where(id => id > 0).Distinct().ToList() });
+    }
+
+    /// <summary>
     /// Get current bot token (masked for non-admin, full for admin/admin internal).
     /// Returns full token when X-Internal-Service header is "telegram-bot" or user is authenticated admin.
     /// </summary>
@@ -142,4 +179,9 @@ public class UpdateBotTokenRequest
 public class TestBotTokenRequest
 {
     public string Token { get; set; } = string.Empty;
+}
+
+public class UpdateBotAdminIdsRequest
+{
+    public List<long> AdminIds { get; set; } = new();
 }

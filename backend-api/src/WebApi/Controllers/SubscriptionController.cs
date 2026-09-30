@@ -77,15 +77,17 @@ public class SubscriptionController : ControllerBase
             return BadRequest(new { success = false, message = "امضای امنیتی نامعتبر است. لطفاً از طریق دکمه تلگرام وارد شوید." });
         }
 
-        // Extract real client IP (ArvanCloud CDN sends Ar-Real-IP)
+        // Extract real client IP from standard proxy headers.
+        // No CDN is in front anymore; HAProxy passes traffic through and Nginx
+        // forwards the client address as X-Real-IP / X-Forwarded-For.
         string? clientIp = null;
 
-        // Priority 1: ArvanCloud Ar-Real-IP header
-        var arRealIp = HttpContext.Request.Headers["Ar-Real-IP"].FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(arRealIp))
-            clientIp = arRealIp;
+        // Priority 1: X-Real-IP (set by the Nginx reverse proxy)
+        var realIp = HttpContext.Request.Headers["X-Real-IP"].FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(realIp))
+            clientIp = realIp.Trim();
 
-        // Priority 2: X-Forwarded-For (from nginx reverse proxy)
+        // Priority 2: X-Forwarded-For — first entry is the original client
         if (string.IsNullOrWhiteSpace(clientIp))
         {
             var forwardedFor = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();

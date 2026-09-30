@@ -1,7 +1,7 @@
 import axios from 'axios';
 import crypto from 'crypto';
 
-const api = axios.create({
+export const api = axios.create({
   baseURL: process.env.API_URL || 'http://backend-api:8080',
   timeout: 10000,
 });
@@ -40,6 +40,19 @@ export async function fetchBotToken(): Promise<{ token: string; isConfigured: bo
     return null;
   }
 }
+
+/** Fetch bot admin Telegram IDs from backend settings */
+export async function fetchBotAdminIds(): Promise<number[]> {
+  try {
+    const { data } = await api.get('/api/settings/bot-admin-ids', {
+      headers: { 'X-Internal-Service': 'telegram-bot' }
+    });
+    return data.adminIds || [];
+  } catch {
+    return [];
+  }
+}
+
 
 // === Subscription / IP Registration API ===
 

@@ -59,6 +59,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.PasswordHash).IsRequired();
             entity.Property(e => e.PasswordSalt).IsRequired();
             entity.Property(e => e.Role).HasMaxLength(64).HasDefaultValue("Admin");
+            entity.Property(e => e.Permissions).HasMaxLength(512).HasDefaultValue("all");
         });
 
         // SystemSetting configuration

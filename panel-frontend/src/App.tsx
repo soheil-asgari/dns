@@ -8,12 +8,13 @@ import GamingDomains from './pages/GamingDomains';
 import ProxyRules from './pages/ProxyRules';
 import Analytics from './pages/Analytics';
 import SettingsPage from './pages/Settings';
+import UsersPage from './pages/Users';
+import BotAdminsPage from './pages/BotAdmins';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('auth_token');
   const { isAuthenticated, isLoading } = useAuth();
 
-  // Immediately redirect to login if no token — before mounting data-fetching children
   if (!token) {
     return <Navigate to="/login" replace />;
   }
@@ -40,6 +41,8 @@ function AppRoutes() {
         <Route path="gaming-domains" element={<GamingDomains />} />
         <Route path="proxy-rules" element={<ProxyRules />} />
         <Route path="analytics" element={<Analytics />} />
+        <Route path="users" element={<UsersPage />} />
+        <Route path="bot-admins" element={<BotAdminsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/panel" replace />} />

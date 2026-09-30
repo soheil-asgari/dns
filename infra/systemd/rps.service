@@ -1,0 +1,14 @@
+[Unit]
+Description=Enable RPS (Receive Packet Steering) across all CPU cores on high-throughput NICs
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Distribute packet receive processing across all cores (mask f = 4 cores).
+ExecStart=/bin/sh -c 'for q in /sys/class/net/eth*/queues/rx-*/rps_cpus; do [ -e "$q" ] && echo f > "$q"; done; echo "RPS enabled on eth1/eth2"'
+ExecStop=/bin/sh -c 'for q in /sys/class/net/eth*/queues/rx-*/rps_cpus; do [ -e "$q" ] && echo 0 > "$q"; done; echo "RPS disabled"'
+
+[Install]
+WantedBy=multi-user.target

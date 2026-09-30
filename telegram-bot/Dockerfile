@@ -3,8 +3,12 @@ WORKDIR /app
 
 COPY package*.json ./
 
-# نصب تایپ‌اسکریپت و وابستگی‌ها منحصراً از مخزن ابرها
-RUN npm install -g typescript --registry="https://mirror.abrha.net/repository/npm/" --strict-ssl=false && \
+# نصب تایپ‌اسکریپت و وابستگی‌ها - سعی می‌کنه اول از رجیستری پیشفرض نصب کنه،
+# در صورت خطا از mirror استفاده می‌کنه
+RUN npm install -g typescript --strict-ssl=false 2>/dev/null || \
+    npm install -g typescript --registry="https://mirror.abrha.net/repository/npm/" --strict-ssl=false
+
+RUN npm install --legacy-peer-deps --strict-ssl=false 2>/dev/null || \
     npm install --legacy-peer-deps --registry="https://mirror.abrha.net/repository/npm/" --strict-ssl=false
 
 COPY . .

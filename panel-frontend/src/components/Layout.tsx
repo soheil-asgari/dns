@@ -7,6 +7,8 @@ import {
   Shield,
   BarChart3,
   Settings,
+  Users,
+  UserCog,
 } from 'lucide-react';
 import { dnsApi } from '../services/api';
 import { useDnsStore } from '../store/dnsStore';
@@ -17,7 +19,11 @@ const navItems = [
   { to: '/panel/gaming-domains', icon: Gamepad2, label: 'Gaming Domains' },
   { to: '/panel/proxy-rules', icon: Shield, label: 'Proxy Rules' },
   { to: '/panel/analytics', icon: BarChart3, label: 'Analytics' },
-  { to: '/panel/settings', icon: Settings, label: 'Settings', end: false },
+];
+
+const adminNavItems = [
+  { to: '/panel/users', icon: Users, label: 'Users' },
+  { to: '/panel/bot-admins', icon: UserCog, label: 'Bot Admins' },
 ];
 
 export default function Layout() {
@@ -58,13 +64,16 @@ export default function Layout() {
       )}
 
       {/* Sidebar */}
-      <aside className="w-64 bg-slate-800 border-r border-slate-700">
+      <aside className="w-64 bg-slate-800 border-r border-slate-700 flex flex-col">
         <div className="p-6">
           <div className="flex items-center gap-3 mb-8">
             <Globe className="w-8 h-8 text-indigo-500" />
             <h1 className="text-xl font-bold">DNS Panel</h1>
           </div>
-          <nav className="space-y-1">
+
+          {/* Main Navigation */}
+          <nav className="space-y-1 mb-4">
+            <p className="text-xs text-slate-500 uppercase tracking-wider mb-2 px-3">Management</p>
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
@@ -83,6 +92,44 @@ export default function Layout() {
               </NavLink>
             ))}
           </nav>
+
+          {/* Admin Section */}
+          <nav className="space-y-1">
+            <p className="text-xs text-slate-500 uppercase tracking-wider mb-2 px-3">Admin</p>
+            {adminNavItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                    isActive
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-slate-300 hover:bg-slate-700'
+                  }`
+                }
+              >
+                <item.icon className="w-5 h-5" />
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+          </nav>
+        </div>
+
+        {/* Settings at bottom */}
+        <div className="mt-auto p-6 border-t border-slate-700">
+          <NavLink
+            to="/panel/settings"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                isActive
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-300 hover:bg-slate-700'
+              }`
+            }
+          >
+            <Settings className="w-5 h-5" />
+            <span>Settings</span>
+          </NavLink>
         </div>
       </aside>
 

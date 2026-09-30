@@ -5,7 +5,7 @@ import pino from 'pino';
 import { startHandler, helpHandler, setupCallbacks } from './commands/start.js';
 import { dnsHandler } from './commands/dns.js';
 import { listHandler } from './commands/list.js';
-import { adminHandler } from './commands/admin.js';
+import { adminHandler, isAdmin, addAdminHandler, removeAdminHandler, listAdminsHandler } from './commands/admin.js';
 import { fetchBotToken } from './services/api.js';
 import { publishLatestGamingNews, publishDnsPromo } from './modules/channelPublisher.js';
 
@@ -13,7 +13,7 @@ const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 
 let bot: Telegraf | null = null;
 let running = false;
-let generalRedis: any = null; // کلاینت ردیس برای کارهای معمولی مثل بررسی خبرهای تکراری
+let generalRedis: any = null;
 
 async function getBotToken(): Promise<string | null> {
   let token = process.env.BOT_TOKEN;
@@ -81,22 +81,106 @@ async function startBot(token: string) {
   bot.command('dns', dnsHandler);
   bot.command('list', listHandler);
   bot.command('admin', adminHandler);
+  bot.command('addadmin', addAdminHandler);
+  bot.command('removeadmin', removeAdminHandler);
+  bot.command('listadmins', listAdminsHandler);
 
-  // دستور تست دستی ارسال خبر به کانال
+  // Admin-only: post news and DNS promo with permission check
   bot.command('postnews', async (ctx) => {
+    const telegramId = ctx.from?.id;
+    if (!telegramId) {
+      await ctx.reply('❌ خطا: شناسه کاربر یافت نشد');
+      return;
+    }
+
+    // Check admin status dynamically (env var + backend)
+    const authorized = await isAdmin(ctx);
+    if (!authorized) {
+      await ctx.reply('⛔ این دستور فقط برای ادمین‌های ربات مجاز است.');
+      return;
+    }
+
     try {
+      const channelId = process.env.CHANNEL_ID;
+      if (!channelId) {
+        await ctx.reply('❌ CHANNEL_ID در محیط تنظیم نشده است.');
+        return;
+      }
+
+      // Verify bot is admin in channel
+      try {
+        if (!bot || !bot.botInfo) {
+          await ctx.reply('❌ ربات هنوز آماده نیست. چند لحظه بعد تلاش کنید.');
+          return;
+        }
+        const chatMember = await bot.telegram.getChatMember(channelId, bot.botInfo.id);
+        if (chatMember.status !== 'administrator' && chatMember.status !== 'creator') {
+          await ctx.reply('❌ ربات در کانال ادمین نیست. لطفاً ربات را ادمین کانال کنید.');
+          return;
+        }
+      } catch (err: any) {
+        logger.error({ err }, 'Failed to verify bot channel membership');
+        await ctx.reply(`❌ ربات به کانال دسترسی ندارد: ${err?.message || err}`);
+        return;
+      }
+
       await ctx.reply('⏳ در حال دریافت آخرین اخبار گیمینگ و بازنویسی با مدل هوش مصنوعی...');
-      await publishLatestGamingNews(bot!, generalRedis);
+      if (!bot) {
+        await ctx.reply('❌ ربات در دسترس نیست.');
+        return;
+      }
+      await publishLatestGamingNews(bot, generalRedis);
       await ctx.reply('✅ خبر جدید با موفقیت به کانال ارسال شد.');
     } catch (err: any) {
       logger.error({ err }, 'Failed to publish news via /postnews');
       await ctx.reply(`❌ خطا در پردازش یا ارسال: ${err?.message || err}`);
     }
   });
+
   bot.command('postdns', async (ctx) => {
+    const telegramId = ctx.from?.id;
+    if (!telegramId) {
+      await ctx.reply('❌ خطا: شناسه کاربر یافت نشد');
+      return;
+    }
+
+    // Check admin status dynamically (env var + backend)
+    const authorized = await isAdmin(ctx);
+    if (!authorized) {
+      await ctx.reply('⛔ این دستور فقط برای ادمین‌های ربات مجاز است.');
+      return;
+    }
+
     try {
+      const channelId = process.env.CHANNEL_ID;
+      if (!channelId) {
+        await ctx.reply('❌ CHANNEL_ID در محیط تنظیم نشده است.');
+        return;
+      }
+
+      // Verify bot is admin in channel
+      try {
+        if (!bot || !bot.botInfo) {
+          await ctx.reply('❌ ربات هنوز آماده نیست. چند لحظه بعد تلاش کنید.');
+          return;
+        }
+        const chatMember = await bot.telegram.getChatMember(channelId, bot.botInfo.id);
+        if (chatMember.status !== 'administrator' && chatMember.status !== 'creator') {
+          await ctx.reply('❌ ربات در کانال ادمین نیست. لطفاً ربات را ادمین کانال کنید.');
+          return;
+        }
+      } catch (err: any) {
+        logger.error({ err }, 'Failed to verify bot channel membership');
+        await ctx.reply(`❌ ربات به کانال دسترسی ندارد: ${err?.message || err}`);
+        return;
+      }
+
       await ctx.reply('⏳ در حال تولید پست اختصاصی دی‌ان‌اس با هوش مصنوعی و ارسال به کانال...');
-      await publishDnsPromo(bot!);
+      if (!bot) {
+        await ctx.reply('❌ ربات در دسترس نیست.');
+        return;
+      }
+      await publishDnsPromo(bot);
       await ctx.reply('✅ پست اختصاصی دی‌ان‌اس با موفقیت در کانال منتشر شد!');
     } catch (err: any) {
       logger.error({ err }, 'Failed to publish DNS promo via /postdns');
@@ -107,35 +191,41 @@ async function startBot(token: string) {
   // Setup callback query handlers
   setupCallbacks(bot);
 
-  // Start bot
+  // Start bot.
   try {
-    await bot.launch();
-    logger.info('Bot started');
-    running = true;
-
-    // ارسال خودکار اخبار به کانال (اجرای اول بعد از ۲ دقیقه، سپس هر ۳ ساعت یک‌بار)
-    setTimeout(() => {
-      if (bot && running) {
-        publishLatestGamingNews(bot, generalRedis);
-      }
-    }, 2 * 60 * 1000);
-
-    setInterval(() => {
-      if (bot && running) {
-        publishLatestGamingNews(bot, generalRedis);
-      }
-    }, 3 * 60 * 60 * 1000);
-
+    await bot.telegram.getMe();
   } catch (err: unknown) {
     const errMsg = err instanceof Error ? err.message : String(err);
     if (errMsg.includes('404') || errMsg.includes('Not Found') || errMsg.includes('not found')) {
       logger.warn('Provided bot token is invalid. Waiting for a valid token...');
     } else {
-      logger.error({ err: errMsg }, 'Failed to launch bot');
+      logger.error({ err: errMsg }, 'Failed to validate bot token');
     }
     bot = null;
     running = false;
+    return;
   }
+
+  running = true;
+  logger.info('Bot started');
+
+  bot.launch({ dropPendingUpdates: false }).catch((err: unknown) => {
+    logger.error({ err: err instanceof Error ? err.message : err }, 'Bot polling stopped');
+    running = false;
+  });
+
+  // Auto-publish gaming news (first after 2 min, then every 3 hours)
+  setTimeout(() => {
+    if (bot && running) {
+      publishLatestGamingNews(bot, generalRedis);
+    }
+  }, 2 * 60 * 1000);
+
+  setInterval(() => {
+    if (bot && running) {
+      publishLatestGamingNews(bot, generalRedis);
+    }
+  }, 3 * 60 * 60 * 1000);
 }
 
 function setupProcessHandlers(botInstance: Telegraf | null) {
@@ -146,7 +236,7 @@ function setupProcessHandlers(botInstance: Telegraf | null) {
 }
 
 async function init() {
-  // ساخت کلاینت عمومی ردیس برای بررسی تکراری نبودن اخبار
+  // Create general Redis client for checking duplicate news
   try {
     const redisModule: any = await import('redis');
     const redisUrl = process.env.REDIS_URL || 'redis://redis:6379';
@@ -217,7 +307,6 @@ async function init() {
 
         switch (payload.type) {
           case 'payment_success': {
-            // Cascade fallback for plan title: payload.planTitle -> payload.planName -> payload.planDuration -> 'اشتراک ویژه'
             let planName = payload.planTitle || payload.planName || '';
             if (!planName && payload.planDurationDays) {
               planName = `${payload.planDurationDays} روزه`;
