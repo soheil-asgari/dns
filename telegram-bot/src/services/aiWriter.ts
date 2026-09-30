@@ -57,7 +57,7 @@ export async function rewriteGamingNews(rawTitle: string, rawSnippet: string): P
 
     return content || rawSnippet;
 }
-export async function generateDnsPromoCopy(): Promise<{ text: string; topic: string }> {
+export async function generateDnsPromoCopy(preferredTopic?: string): Promise<{ text: string; topic: string }> {
     const apiKey = process.env.GAPGPT_API_KEY;
     const baseUrl = process.env.GAPGPT_BASE_URL || 'https://api.gapgpt.app/v1';
     const model = process.env.GAPGPT_MODEL || 'gpt-5.6-luna';
@@ -85,7 +85,9 @@ export async function generateDnsPromoCopy(): Promise<{ text: string; topic: str
         },
     ];
 
-    const selected = topics[Math.floor(Math.random() * topics.length)];
+    const selected = preferredTopic
+        ? (topics.find((t) => t.name === preferredTopic) || topics[Math.floor(Math.random() * topics.length)])
+        : topics[Math.floor(Math.random() * topics.length)];
 
     const systemPrompt = `تو یک گیمر خوره و حرفه‌ای ایرانی هستی که داری سرویس DNS گیمینگ خودت (راینو دی‌ان‌اس / Rhyno DNS) رو به بچه‌های کانال تلگرام معرفی می‌کنی.
 وظیفه داری یک پست کوتاه، پرانرژی، کوبنده و کاملاً دوستانه بنویسی.

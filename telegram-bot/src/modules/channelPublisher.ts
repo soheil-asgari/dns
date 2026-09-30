@@ -120,34 +120,121 @@ function cleanImageUrl(url: string): string | null {
     return cleaned || null;
 }
 
-async function checkIsPosted(redis: any, url: string): Promise<boolean> {
-    if (!redis || typeof redis.sismember !== 'function') {
-        // Promise-based redis client
-        try {
-            const result = await redis.sismember('channel:posted_news', url);
-            return result === 1;
-        } catch { return false; }
+const POSTED_NEWS_KEY = 'channel:posted_news';
+const POSTED_NEWS_TEXT_KEY = 'channel:posted_news_texts';
+const POSTED_PROMO_KEY = 'channel:posted_promos';
+
+// In-memory fallbacks guarantee dedup even if Redis is unavailable
+const memoryPostedNews = new Set<string>();
+const memoryPostedNewsText = new Set<string>();
+const memoryPostedPromos = new Set<string>();
+
+async function sIsMember(redis: any, key: string, member: string): Promise<boolean> {
+    if (!redis) return false;
+    try {
+        // redis v4+ (promise-based client): has sIsMember
+        if (typeof redis.sIsMember === 'function') {
+            const result = await redis.sIsMember(key, member);
+            return result === true || result === 1;
+        }
+        // redis v2 (callback-based client): pass a callback to promisify
+        if (typeof redis.sismember === 'function') {
+            return await new Promise<boolean>((resolve) => {
+                try {
+                    redis.sismember(key, member, (err: any, reply: any) => {
+                        if (err) resolve(false);
+                        else resolve(reply === 1 || reply === true);
+                    });
+                } catch { resolve(false); }
+            });
+        }
+        return false;
+    } catch {
+        return false;
     }
-    // Callback-based redis client
-    return new Promise((resolve) => {
-        redis.sismember('channel:posted_news', url, (err: any, reply: number) => {
-            if (err) resolve(false);
-            else resolve(reply === 1);
-        });
-    });
+}
+
+async function sAdd(redis: any, key: string, member: string): Promise<void> {
+    if (!redis) return;
+    try {
+        if (typeof redis.sAdd === 'function') {
+            await redis.sAdd(key, member);
+            return;
+        }
+        if (typeof redis.sadd === 'function') {
+            await new Promise<void>((resolve) => {
+                try { redis.sadd(key, member, () => resolve()); } catch { resolve(); }
+            });
+        }
+    } catch { /* ignore */ }
+}
+
+async function checkIsPosted(redis: any, url: string): Promise<boolean> {
+    if (memoryPostedNews.has(url)) return true;
+    return sIsMember(redis, POSTED_NEWS_KEY, url);
 }
 
 async function markAsPosted(redis: any, url: string): Promise<void> {
-    if (!redis || typeof redis.sadd !== 'function') {
-        try { await redis.sadd('channel:posted_news', url); } catch { /* ignore */ }
-        return;
-    }
-    return new Promise((resolve) => {
-        redis.sadd('channel:posted_news', url, () => resolve());
-    });
+    memoryPostedNews.add(url);
+    await sAdd(redis, POSTED_NEWS_KEY, url);
 }
 
+function normalizePostText(text: string): string {
+    return text.replace(/\s+/g, ' ').replace(/[*_~`>#+\-=|{}.!]/g, '').trim();
+}
+
+async function isTextDuplicate(redis: any, text: string, key: string, memory: Set<string>): Promise<boolean> {
+    const normalized = normalizePostText(text);
+    if (!normalized) return true;
+    if (memory.has(normalized)) return true;
+    return sIsMember(redis, key, normalized);
+}
+
+async function markTextPosted(redis: any, text: string, key: string, memory: Set<string>): Promise<void> {
+    const normalized = normalizePostText(text);
+    if (!normalized) return;
+    memory.add(normalized);
+    await sAdd(redis, key, normalized);
+}
+
+async function isPromoDuplicate(redis: any, topic: string, text?: string): Promise<boolean> {
+    if (memoryPostedPromos.has(topic)) return true;
+    if (await sIsMember(redis, POSTED_PROMO_KEY, topic)) return true;
+    // Also guard against legacy entries that stored the rendered post body
+    if (text && await isTextDuplicate(redis, text, POSTED_PROMO_KEY, new Set<string>())) return true;
+    return false;
+}
+
+async function markPromoPosted(redis: any, topic: string, text?: string): Promise<void> {
+    memoryPostedPromos.add(topic);
+    await sAdd(redis, POSTED_PROMO_KEY, topic);
+    if (text) await markTextPosted(redis, text, POSTED_PROMO_KEY, new Set<string>());
+}
+
+async function isNewsTextDuplicate(redis: any, text: string): Promise<boolean> {
+    return isTextDuplicate(redis, text, POSTED_NEWS_TEXT_KEY, memoryPostedNewsText);
+}
+
+async function markNewsTextPosted(redis: any, text: string): Promise<void> {
+    await markTextPosted(redis, text, POSTED_NEWS_TEXT_KEY, memoryPostedNewsText);
+}
+
+let newsPublishInFlight = false;
+
 export async function publishLatestGamingNews(bot: Telegraf<any>, redisClient: any) {
+    if (newsPublishInFlight) {
+        console.log('[ChannelPublisher] News publish already in progress, skipping.');
+        return false;
+    }
+    newsPublishInFlight = true;
+    try {
+        return await doPublishLatestGamingNews(bot, redisClient);
+    } finally {
+        newsPublishInFlight = false;
+    }
+}
+
+async function doPublishLatestGamingNews(bot: Telegraf<any>, redisClient: any): Promise<boolean> {
     const channelId = process.env.CHANNEL_ID;
     const botUsername = process.env.BOT_USERNAME || 'rhynodnsbot';
 
@@ -239,6 +326,12 @@ export async function publishLatestGamingNews(bot: Telegraf<any>, redisClient: a
             continue;
         }
 
+        // Final guard: never publish a title we already posted (even with a new URL)
+        if (await isNewsTextDuplicate(redisClient, item.title)) {
+            console.log(`[ChannelPublisher] Skipping already-posted title: ${item.title}`);
+            continue;
+        }
+
         const inlineKeyboard = [
             [
                 { text: '🎮 دریافت دی‌ان‌اس و کاهش پینگ', url: `https://t.me/${botUsername.replace('@', '')}?start=channel` },
@@ -272,11 +365,13 @@ export async function publishLatestGamingNews(bot: Telegraf<any>, redisClient: a
         }
 
         await markAsPosted(redisClient, item.link);
+        await markNewsTextPosted(redisClient, item.title);
         console.log(`[ChannelPublisher] Successfully posted gaming news: ${item.title}`);
-        return;
+        return true;
     }
 
     console.log('[ChannelPublisher] No new gaming news found to publish.');
+    return false;
 }
 
 
@@ -288,7 +383,22 @@ const TOPIC_IMAGES: Record<string, string> = {
     free_trial: 'https://images.unsplash.com/photo-1612287271162-26466986503d?q=80&w=1200&auto=format&fit=crop',
 };
 
-export async function publishDnsPromo(bot: Telegraf<any>) {
+let promoPublishInFlight = false;
+
+export async function publishDnsPromo(bot: Telegraf<any>, redisClient?: any) {
+    if (promoPublishInFlight) {
+        console.log('[ChannelPublisher] DNS promo publish already in progress, skipping.');
+        return false;
+    }
+    promoPublishInFlight = true;
+    try {
+        return await doPublishDnsPromo(bot, redisClient);
+    } finally {
+        promoPublishInFlight = false;
+    }
+}
+
+async function doPublishDnsPromo(bot: Telegraf<any>, redisClient?: any): Promise<boolean> {
     const channelId = process.env.CHANNEL_ID;
     const botUsername = process.env.BOT_USERNAME || 'rhynodnsbot';
 
@@ -308,27 +418,44 @@ export async function publishDnsPromo(bot: Telegraf<any>) {
         throw new Error(`ربات به کانال دسترسی ندارد: ${err?.message || err}`);
     }
 
-    const promo = await generateDnsPromoCopy();
-    const imageUrl = TOPIC_IMAGES[promo.topic] || TOPIC_IMAGES['warzone'];
+    // Pick a topic that has never been published before; never repeat one
+    for (const topic of Object.keys(TOPIC_IMAGES)) {
+        if (await isPromoDuplicate(redisClient, topic)) continue;
 
-    const inlineKeyboard = [
-        [
-            { text: '🎁 فعال‌سازی ۲۴ ساعت تست رایگان', url: `https://t.me/${botUsername.replace('@', '')}?start=promo` },
-        ],
-        [
-            { text: '⚡ ثبت سریع آی‌پی (بدون رمز)', url: `https://t.me/${botUsername.replace('@', '')}?start=register_ip` },
-            { text: '📖 آموزش تنظیم در کنسول', url: `https://t.me/${botUsername.replace('@', '')}?start=guide` },
-        ],
-    ];
+        const promo = await generateDnsPromoCopy(topic);
 
-    const plainText = promo.text
-        .replace(/[*_~`>#+\-=|{}.!]/g, '')
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+        const plainText = promo.text
+            .replace(/[*_~`>#+\-=|{}.!]/g, '')
+            .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
 
-    await bot.telegram.sendPhoto(channelId, imageUrl, {
-        caption: plainText,
-        reply_markup: { inline_keyboard: inlineKeyboard },
-    });
+        if (await isTextDuplicate(redisClient, plainText, POSTED_PROMO_KEY, memoryPostedPromos)) {
+            console.log(`[ChannelPublisher] Promo text for topic "${topic}" already posted, skipping...`);
+            continue;
+        }
 
-    console.log(`[ChannelPublisher] Successfully published DNS Promo for topic: ${promo.topic}`);
+        const imageUrl = TOPIC_IMAGES[promo.topic] || TOPIC_IMAGES['warzone'];
+
+        const inlineKeyboard = [
+            [
+                { text: '🎁 فعال‌سازی ۲۴ ساعت تست رایگان', url: `https://t.me/${botUsername.replace('@', '')}?start=promo` },
+            ],
+            [
+                { text: '⚡ ثبت سریع آی‌پی (بدون رمز)', url: `https://t.me/${botUsername.replace('@', '')}?start=register_ip` },
+                { text: '📖 آموزش تنظیم در کنسول', url: `https://t.me/${botUsername.replace('@', '')}?start=guide` },
+            ],
+        ];
+
+        await bot.telegram.sendPhoto(channelId, imageUrl, {
+            caption: plainText,
+            reply_markup: { inline_keyboard: inlineKeyboard },
+        });
+
+        await markPromoPosted(redisClient, promo.topic, plainText);
+        console.log(`[ChannelPublisher] Successfully published DNS Promo for topic: ${promo.topic}`);
+        return true;
+    }
+
+    // All topics already posted — do not repeat
+    console.log('[ChannelPublisher] All DNS promo topics already posted.');
+    return false;
 }

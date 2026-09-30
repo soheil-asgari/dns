@@ -129,8 +129,12 @@ async function startBot(token: string) {
         await ctx.reply('❌ ربات در دسترس نیست.');
         return;
       }
-      await publishLatestGamingNews(bot, generalRedis);
-      await ctx.reply('✅ خبر جدید با موفقیت به کانال ارسال شد.');
+      const posted = await publishLatestGamingNews(bot, generalRedis);
+      if (posted) {
+        await ctx.reply('✅ خبر جدید با موفقیت به کانال ارسال شد.');
+      } else {
+        await ctx.reply('ℹ️ خبر جدید و تکراری‌نشده‌ای پیدا نشد؛ پستی ارسال نشد.');
+      }
     } catch (err: any) {
       logger.error({ err }, 'Failed to publish news via /postnews');
       await ctx.reply(`❌ خطا در پردازش یا ارسال: ${err?.message || err}`);
@@ -180,8 +184,12 @@ async function startBot(token: string) {
         await ctx.reply('❌ ربات در دسترس نیست.');
         return;
       }
-      await publishDnsPromo(bot);
-      await ctx.reply('✅ پست اختصاصی دی‌ان‌اس با موفقیت در کانال منتشر شد!');
+      const posted = await publishDnsPromo(bot, generalRedis);
+      if (posted) {
+        await ctx.reply('✅ پست اختصاصی دی‌ان‌اس با موفقیت در کانال منتشر شد!');
+      } else {
+        await ctx.reply('ℹ️ موضوع تکراری‌نشده‌ای باقی نمانده؛ پستی ارسال نشد.');
+      }
     } catch (err: any) {
       logger.error({ err }, 'Failed to publish DNS promo via /postdns');
       await ctx.reply(`❌ خطا در ارسال پست دی‌ان‌اس: ${err?.message || err}`);
@@ -215,17 +223,15 @@ async function startBot(token: string) {
   });
 
   // Auto-publish gaming news (first after 2 min, then every 3 hours)
-  setTimeout(() => {
-    if (bot && running) {
-      publishLatestGamingNews(bot, generalRedis);
-    }
-  }, 2 * 60 * 1000);
+  const runAutoPublish = () => {
+    if (!bot || !running) return;
+    publishLatestGamingNews(bot, generalRedis).catch((err: any) => {
+      logger.warn({ err: err?.message || err }, 'Auto-publish failed');
+    });
+  };
 
-  setInterval(() => {
-    if (bot && running) {
-      publishLatestGamingNews(bot, generalRedis);
-    }
-  }, 3 * 60 * 60 * 1000);
+  setTimeout(runAutoPublish, 2 * 60 * 1000);
+  setInterval(runAutoPublish, 3 * 60 * 60 * 1000);
 }
 
 function setupProcessHandlers(botInstance: Telegraf | null) {
