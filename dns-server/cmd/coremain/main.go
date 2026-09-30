@@ -20,13 +20,16 @@ import (
 )
 
 func init() {
-	// Ensure gaming_filter is recognized as a valid directive before forward.
-	// Without this, CoreDNS rejects it with "Unknown directive 'gaming_filter'"
-	// because the upstream zdirectives.go does not include it.
+	// Ensure gaming_filter is recognized as a valid directive and, critically,
+	// runs BEFORE "cache". Inserting it merely before "forward" would let the
+	// cache plugin serve a whitelisted client's cached A records straight back
+	// to unregistered clients, silently bypassing the whitelist enforcement.
+	// Without registering the directive, CoreDNS also rejects it as "Unknown
+	// directive 'gaming_filter'".
 	directives := make([]string, 0, len(dnsserver.Directives)+1)
 	inserted := false
 	for _, d := range dnsserver.Directives {
-		if d == "forward" && !inserted {
+		if (d == "cache" || d == "forward") && !inserted {
 			directives = append(directives, "gaming_filter")
 			inserted = true
 		}

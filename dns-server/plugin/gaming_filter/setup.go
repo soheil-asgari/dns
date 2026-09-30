@@ -19,6 +19,8 @@ func setup(c *caddy.Controller) error {
 	var redisAddr string
 	var refreshInterval time.Duration
 	var proxyIP string
+	var whitelistKey string
+	var whitelistCacheTTL time.Duration
 
 	for c.NextBlock() {
 		switch c.Val() {
@@ -41,6 +43,20 @@ func setup(c *caddy.Controller) error {
 				return c.ArgErr()
 			}
 			proxyIP = c.Val()
+		case "whitelist_key":
+			if !c.NextArg() {
+				return c.ArgErr()
+			}
+			whitelistKey = c.Val()
+		case "whitelist_cache_ttl":
+			if !c.NextArg() {
+				return c.ArgErr()
+			}
+			d, err := time.ParseDuration(c.Val())
+			if err != nil {
+				return c.Errf("invalid whitelist_cache_ttl: %v", err)
+			}
+			whitelistCacheTTL = d
 		default:
 			return c.Errf("unknown property '%s'", c.Val())
 		}
@@ -58,9 +74,17 @@ func setup(c *caddy.Controller) error {
 			proxyIP = "10.0.0.1"
 		}
 	}
+	if whitelistKey == "" {
+		whitelistKey = "whitelist:ips"
+	}
+	if whitelistCacheTTL == 0 {
+		whitelistCacheTTL = 5 * time.Second
+	}
 
 	gf := New(redisAddr, refreshInterval)
 	gf.proxyIP = proxyIP
+	gf.whitelistKey = whitelistKey
+	gf.whitelistCacheTTL = whitelistCacheTTL
 
 	cfg := dnsserver.GetConfig(c)
 	cfg.AddPlugin(func(next plugin.Handler) plugin.Handler {

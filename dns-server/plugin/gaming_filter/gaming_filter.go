@@ -29,6 +29,13 @@ type GamingFilter struct {
 	gamingDomains   map[string]bool
 	proxyIP         string
 	mu              sync.RWMutex
+
+	// ── Registered-IP enforcement ──
+	whitelistKey      string
+	whitelistCacheTTL time.Duration
+	allowedIPs        map[string]bool
+	allowedIPsFetched time.Time
+	whitelistMu       sync.RWMutex
 }
 
 func New(redisAddr string, refreshInterval time.Duration) *GamingFilter {
@@ -37,10 +44,13 @@ func New(redisAddr string, refreshInterval time.Duration) *GamingFilter {
 	})
 
 	gf := &GamingFilter{
-		redisClient:     rdb,
-		refreshInterval:  refreshInterval,
-		gamingDomains:    make(map[string]bool),
-		proxyIP:          "10.0.0.1",
+		redisClient:       rdb,
+		refreshInterval:   refreshInterval,
+		gamingDomains:     make(map[string]bool),
+		proxyIP:           "10.0.0.1",
+		whitelistKey:      "whitelist:ips",
+		whitelistCacheTTL: 5 * time.Second,
+		allowedIPs:        make(map[string]bool),
 	}
 
 	go gf.startRefresher()
@@ -100,13 +110,72 @@ func (gf *GamingFilter) updateDomains() {
 	log.Infof("[gaming_filter] Successfully loaded %d gaming domains from Redis", count)
 }
 
+// isClientAllowed reports whether clientIp is present in the Redis-backed
+// `whitelist:ips` set. The snapshot is cached in-memory for whitelistCacheTTL
+// (same pattern as the domain list) so we don't hit Redis on every query.
+// On a Redis error the last snapshot is reused; if no snapshot has ever
+// loaded the client is allowed (fail-open) so a Redis outage cannot black
+// out DNS resolution for everyone.
+func (gf *GamingFilter) isClientAllowed(clientIp string) bool {
+	ip := net.ParseIP(clientIp)
+	if ip == nil {
+		return false
+	}
+	ipStr := ip.String()
+
+	gf.whitelistMu.RLock()
+	fresh := !gf.allowedIPsFetched.IsZero() && time.Since(gf.allowedIPsFetched) < gf.whitelistCacheTTL
+	cached := gf.allowedIPs[ipStr]
+	everLoaded := !gf.allowedIPsFetched.IsZero()
+	gf.whitelistMu.RUnlock()
+	if fresh {
+		return cached
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	members, err := gf.redisClient.SMembers(ctx, gf.whitelistKey).Result()
+	if err != nil {
+		log.Errorf("[gaming_filter] whitelist SMEMBERS error (key: %s): %v; reusing last snapshot", gf.whitelistKey, err)
+		if !everLoaded {
+			return true // fail-open: never loaded
+		}
+		gf.whitelistMu.RLock()
+		defer gf.whitelistMu.RUnlock()
+		return gf.allowedIPs[ipStr]
+	}
+
+	newSet := make(map[string]bool, len(members))
+	for _, m := range members {
+		if parsed := net.ParseIP(strings.TrimSpace(m)); parsed != nil {
+			newSet[parsed.String()] = true
+		}
+	}
+	gf.whitelistMu.Lock()
+	gf.allowedIPs = newSet
+	gf.allowedIPsFetched = time.Now()
+	gf.whitelistMu.Unlock()
+	return newSet[ipStr]
+}
+
 func (gf *GamingFilter) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	state := request.Request{W: w, Req: r}
 
 	rawName := strings.ToLower(strings.TrimSuffix(state.QName(), "."))
 
 	if gf.isGamingDomain(rawName) {
-		log.Infof("[gaming_filter] Intercepted %s -> rewriting to %s", rawName, gf.proxyIP)
+		clientIp := state.IP()
+		if !gf.isClientAllowed(clientIp) {
+			log.Infof("[gaming_filter] DENIED %s from unregistered client %s -> NXDOMAIN", rawName, clientIp)
+			m := new(dns.Msg)
+			m.SetRcode(r, dns.RcodeNameError) // NXDOMAIN
+			m.Authoritative = true
+			state.W.WriteMsg(m)
+			return dns.RcodeNameError, nil
+		}
+
+		log.Infof("[gaming_filter] Intercepted %s -> rewriting to %s (client %s)", rawName, gf.proxyIP, clientIp)
 
 		rr := new(dns.A)
 		rr.Hdr = dns.RR_Header{
